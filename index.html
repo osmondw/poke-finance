@@ -350,7 +350,7 @@ function render(){
       +'<p style="font-size:12px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
       +'<div class="flex gap-2 mt-2">'
       +'<button onclick="doLogoutConfirm()" class="btn flex-1" style="background:var(--red);color:#fff;font-size:12px;border-color:var(--red)">YES, EXIT</button>'
-      +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--bg);font-size:12px">CANCEL</button>'
+      +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--green);font-size:12px">CANCEL</button>'
       +'</div></div></div>';
   }
 
@@ -777,7 +777,7 @@ function renderParticipants(){
       h+='<div class="pb-sm bg-card p-2 space-y-1">';
       if(partNameErr)h+='<div class="warn-box">⚠️ '+esc(partNameErr)+'</div>';
       h+='<div class="flex gap-1"><input id="pe-name" class="pb-sm" style="flex:1" value="'+esc(p.name)+'"/><input id="pe-contact" class="pb-sm" style="flex:1" value="'+esc(p.contact||'')+'" placeholder="Contact"/></div>';
-      h+='<div class="flex gap-1"><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px" onclick="partSave(\''+p.id+'\')">SAVE</button><button class="btn" style="background:var(--bg);color:var(--muted);font-size:7px" onclick="partCancelEdit()">CANCEL</button></div></div>';
+      h+='<div class="flex gap-1"><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:14px" onclick="partSave(\''+p.id+'\')">SAVE</button><button class="btn" style="background:var(--bg);color:var(--muted);font-size:14px" onclick="partCancelEdit()">CANCEL</button></div></div>';
     }else{
       h+='<div class="pb-sm bg-card p-2 flex items-center justify-between"><div><span style="font-size:9px">'+esc(p.name)+'</span>'+(p.contact?'<span style="font-size:7px" class="text-muted"> 📱 '+esc(p.contact)+'</span>':'')+'</div><div class="flex gap-1"><button onclick="partEdit(\''+p.id+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">EDIT</button><button onclick="partDel(\''+p.id+'\')" style="font-size:7px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">DEL</button></div></div>';
     }
