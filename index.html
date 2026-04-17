@@ -431,7 +431,7 @@ function renderDashboard(){
   /* Chart */
   var today=new Date().toISOString().slice(0,10);
   h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">📊 EXPENSE CHART</p>';
-  h+='<div class="tab-bar">';
+  h+='<div style="font-size:20px" class="tab-bar">';
   [{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'3month',l:'3MO'},{k:'year',l:'YEAR'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
     h+='<button class="'+(state.chartPeriod===p.k?'active':'')+'" onclick="setChart(\''+p.k+'\')">'+p.l+'</button>';
   });
@@ -557,7 +557,7 @@ function renderTracker(){
     if(trackerShowNewCat){h+='<div class="flex gap-1"><input id="t-newcat" class="pb-sm" placeholder="New category" style="flex:1"/><button type="button" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px" onclick="trackerAddCat()">ADD</button></div>'}
     h+='<div class="form-group"><label>DATE</label><input id="t-date" type="date" class="pb-sm" value="'+new Date().toISOString().slice(0,10)+'"/></div>';
     h+='<div class="form-group"><label>NOTE (optional)</label><input id="t-note" class="pb-sm" placeholder="'+(tab==='expense'?'Battle at PokéMart…':'Won the Pokémon League…')+'"/></div>';
-    h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:14px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
+    h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:10px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
     h+='<button type="submit" class="btn w-full" style="background:var(--green);color:#fff;font-size:8px;padding:8px">▶ '+(tab==='expense'?'CATCH EXPENSE':'COLLECT POKÉCOINS')+'</button>';
     h+='</form>';
   }
