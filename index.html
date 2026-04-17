@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PokéWallet — Gotta Track 'Em All!</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a1c2c;--card:#262b44;--fg:#f4f4f4;--muted:#8b8b8b;--primary:#e8c170;
+  --primary-fg:#1a1c2c;--accent:#38b764;--red:#e84040;--green:#38b764;
+  --blue:#3978a8;--secondary:#5fcde4;
+}
+body{font-family:'Press Start 2P',monospace;background:var(--bg);color:var(--fg);font-size:20px;line-height:1.6;min-height:100vh;image-rendering:pixelated}
+input,select,textarea,button{font-family:inherit}
+.pb{border:3px solid var(--fg);box-shadow:3px 3px 0 var(--fg)}
+.pb-sm{border:2px solid var(--fg);box-shadow:2px 2px 0 rgba(244,244,244,.3)}
+.btn{padding:6px 12px;border:2px solid var(--fg);box-shadow:2px 2px 0 var(--fg);cursor:pointer;transition:transform .1s}
+.btn:active{transform:translate(2px,2px);box-shadow:none}
+.bg-card{background:var(--card)}.bg-bg{background:var(--bg)}
+.text-primary{color:var(--primary)}.text-muted{color:var(--muted)}.text-red{color:var(--red)}.text-green{color:var(--green)}.text-accent{color:var(--accent)}.text-secondary{color:var(--secondary)}
+input,select{background:var(--bg);color:var(--fg);padding:6px 8px;font-size:20px;width:100%}
+select{appearance:auto}
+.form-group{margin-bottom:8px}
+.form-group label{display:block;font-size:16px;color:var(--muted);margin-bottom:3px}
+.hidden{display:none!important}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}.items-end{align-items:flex-end}.justify-between{justify-content:space-between}.gap-1{gap:4px}.gap-2{gap:8px}.flex-1{flex:1}.flex-wrap{flex-wrap:wrap}
+.grid{display:grid}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}
+.text-center{text-align:center}.w-full{width:100%}.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.p-2{padding:8px}.p-3{padding:12px}.p-4{padding:16px}
+.space-y-1>*+*{margin-top:4px}.space-y-2>*+*{margin-top:8px}.space-y-3>*+*{margin-top:12px}
+.poke-dialog{border:3px solid var(--fg);box-shadow:3px 3px 0 var(--fg);background:var(--card);padding:12px;min-height:50px}
+.top-bar{background:var(--primary);color:var(--primary-fg);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--fg)}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:3px solid var(--fg);display:flex;justify-content:space-around;padding:6px 0;z-index:100}
+.bottom-nav button{background:none;border:none;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;font-size:35px;padding:4px}
+.bottom-nav button span.lbl{font-size:20px;margin-top:2px}
+.bottom-nav button.active{color:var(--primary)}
+.main-content{flex:1;overflow-y:auto;padding:12px;padding-bottom:90px}
+.tab-bar{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.tab-bar button{flex:1;padding:6px 4px;font-size:7px;border:2px solid var(--fg);background:var(--bg);color:var(--muted);cursor:pointer;min-width:48px}
+.tab-bar button.active{background:var(--primary);color:var(--primary-fg)}
+canvas{width:100%!important;image-rendering:auto}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--muted)}
+.warn-box{background:rgba(232,64,64,0.15);border:2px solid var(--red);padding:6px 10px;font-size:7px;color:var(--red);margin-bottom:6px}
+.info-box{background:rgba(56,183,100,0.12);border:2px solid var(--green);padding:6px 10px;font-size:7px;color:var(--green);margin-bottom:6px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:8px 18px;font-size:8px;border:2px solid #fff;z-index:500;max-width:90%;text-align:center;pointer-events:none}
+.loader{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.spinner{width:32px;height:32px;border:4px solid var(--card);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app"><div class="loader"><div class="spinner"></div><p style="font-size:8px" class="text-primary">Loading PokéWallet…</p></div></div>
+
+<!-- Supabase JS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ══════════════════════════════════════════════════════
+   ⚙  CONFIGURATION — replace with your Supabase values
+   ══════════════════════════════════════════════════════ */
+var SUPABASE_URL = 'YOUR_SUPABASE_URL';
+var SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+/* ── Init Supabase client ───────────────────────────── */
+var configOk = SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+var sb = configOk ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+var DEF_EXP_CATS=['Food','Transportation','Housing','Cellphone','Entertainment','Shopping','Health','Education','Subscription','Paylater','Other'];
+var DEF_INC_CATS=['Salary','Freelance','Investment','Gift','Other'];
+
+/* ── Helpers ─────────────────────────────────────────── */
+function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)})}
+function idr(n){return 'Rp '+Number(n).toLocaleString('id-ID')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+window.numfmt=function(el){var raw=String(el.value).replace(/[^0-9]/g,'');var n=parseInt(raw);el.value=(!isNaN(n)&&n>0)?n.toLocaleString('id-ID'):'';el.dataset.raw=raw};
+function parseK(s){return parseFloat(String(s).replace(/\./g,'').replace(',','.'))||0}
+function fmtDisp(n){var num=parseFloat(n);if(!num||isNaN(num))return'';return Math.round(num).toLocaleString('id-ID')}
+function fmtDate(ds){if(!ds)return'';var d=new Date(ds+'T00:00:00');return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'})}
+
+/* ── In-memory store ─────────────────────────────────── */
+var store={participants:[],categories:[],expenses:[],incomes:[],bills:[],walletInitialBalance:0};
+
+/* ── App state ───────────────────────────────────────── */
+var state={page:'dashboard',user:null,chartPeriod:'week',chartCustomFrom:'',chartCustomTo:'',toast:null,loading:true};
+
+/* ── UI state ────────────────────────────────────────── */
+var authMode='login',authErr='',authLoading=false;
+var trackerTab='expense',trackerShowForm=false,trackerShowNewCat=false,trackerEditId=null,trackerEditType=null;
+var billShowCreate=false,billView=null,billMethod='equal',billSelParts=[],billItems=[],billSplits=[];
+var billFormTitle='',billFormTotal='',billFormBefore='',billFormTax='',billEditId=null;
+var partEditId=null,partNameErr='';
+var logoutWarn=false;
+var profileBalanceMode=null; /* null | 'initial' | 'current' */
+
+/* ── Toast ───────────────────────────────────────────── */
+var _toastTimer=null;
+function showToast(msg,type){
+  state.toast={msg:msg,type:type||'error'};
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(function(){state.toast=null;render()},3500);
+  render();
+}
+
+/* ── DB error handler ───────────────────────────────── */
+function handleDbErr(res){if(res&&res.error){console.error('DB:',res.error.message);showToast('⚠️ Sync error – check console.')}}
+
+/* ══════════════════════════════════════════════════════
+   STORE CRUD — optimistic local update + async Supabase
+   ══════════════════════════════════════════════════════ */
+
+/* Participants */
+function getParts(){return store.participants.slice().sort(function(a,b){return a.name.localeCompare(b.name)})}
+function addPart(name,contact){
+  var p={id:uuid(),userId:state.user.id,name:name,contact:contact};
+  store.participants.push(p);
+  sb.from('participants').insert([{id:p.id,user_id:p.userId,name:p.name,contact:p.contact||null}]).then(handleDbErr);
+  return p;
+}
+function updPart(id,d){
+  store.participants=store.participants.map(function(p){return p.id===id?Object.assign({},p,d):p});
+  var p=store.participants.find(function(x){return x.id===id});
+  if(p)sb.from('participants').update({name:p.name,contact:p.contact||null}).eq('id',id).then(handleDbErr);
+}
+function delPart(id){
+  store.participants=store.participants.filter(function(p){return p.id!==id});
+  sb.from('participants').delete().eq('id',id).then(handleDbErr);
+}
+
+/* Categories */
+function getCats(type){var c=store.categories;return type?c.filter(function(x){return x.type===type}):c.slice()}
+function addCat(name,type){
+  var c={id:uuid(),userId:state.user.id,name:name,type:type,isDefault:false};
+  store.categories.push(c);
+  sb.from('categories').insert([{id:c.id,user_id:c.userId,name:c.name,type:c.type,is_default:false}]).then(handleDbErr);
+  return c;
+}
+
+/* Expenses */
+function getExp(){return store.expenses.slice().sort(function(a,b){return b.date<a.date?-1:b.date>a.date?1:0})}
+function addExp(d){
+  var e=Object.assign({},d,{id:uuid(),userId:state.user.id,createdAt:new Date().toISOString()});
+  store.expenses.push(e);
+  sb.from('expenses').insert([{id:e.id,user_id:e.userId,amount:e.amount,category_id:e.categoryId,date:e.date,note:e.note||null,is_recurring:e.isRecurring||false,recurring_frequency:e.recurringFrequency||null}]).then(handleDbErr);
+  return e;
+}
+function updExp(id,d){
+  store.expenses=store.expenses.map(function(e){return e.id===id?Object.assign({},e,d):e});
+  var e=store.expenses.find(function(x){return x.id===id});
+  if(e)sb.from('expenses').update({amount:e.amount,category_id:e.categoryId,date:e.date,note:e.note||null,is_recurring:e.isRecurring||false,recurring_frequency:e.recurringFrequency||null}).eq('id',id).then(handleDbErr);
+}
+function delExp(id){
+  store.expenses=store.expenses.filter(function(e){return e.id!==id});
+  sb.from('expenses').delete().eq('id',id).then(handleDbErr);
+}
+
+/* Incomes */
+function getInc(){return store.incomes.slice().sort(function(a,b){return b.date<a.date?-1:b.date>a.date?1:0})}
+function addInc(d){
+  var i=Object.assign({},d,{id:uuid(),userId:state.user.id,createdAt:new Date().toISOString()});
+  store.incomes.push(i);
+  sb.from('incomes').insert([{id:i.id,user_id:i.userId,amount:i.amount,source:i.source||null,category_id:i.categoryId,date:i.date,note:i.note||null,is_recurring:i.isRecurring||false,recurring_frequency:i.recurringFrequency||null}]).then(handleDbErr);
+  return i;
+}
+function updInc(id,d){
+  store.incomes=store.incomes.map(function(i){return i.id===id?Object.assign({},i,d):i});
+  var i=store.incomes.find(function(x){return x.id===id});
+  if(i)sb.from('incomes').update({amount:i.amount,source:i.source||null,category_id:i.categoryId,date:i.date,note:i.note||null,is_recurring:i.isRecurring||false,recurring_frequency:i.recurringFrequency||null}).eq('id',id).then(handleDbErr);
+}
+function delInc(id){
+  store.incomes=store.incomes.filter(function(i){return i.id!==id});
+  sb.from('incomes').delete().eq('id',id).then(handleDbErr);
+}
+
+/* Bills */
+function getBills(){return store.bills.slice().sort(function(a,b){return b.createdAt<a.createdAt?-1:1})}
+function addBill(d){
+  var b=Object.assign({},d,{id:uuid(),userId:state.user.id,createdAt:new Date().toISOString()});
+  store.bills.push(b);
+  sb.from('bills').insert([{id:b.id,user_id:b.userId,title:b.title,total_amount:b.totalAmount,amount_before_tax:b.amountBeforeTax||null,tax:b.tax||null,split_method:b.splitMethod,items:b.items||[],participants:b.participants||[],splits:b.splits||[]}]).then(handleDbErr);
+  return b;
+}
+function updBill(id,d){
+  store.bills=store.bills.map(function(b){return b.id===id?Object.assign({},b,d):b});
+  var b=store.bills.find(function(x){return x.id===id});
+  if(b)sb.from('bills').update({title:b.title,total_amount:b.totalAmount,amount_before_tax:b.amountBeforeTax||null,tax:b.tax||null,split_method:b.splitMethod,items:b.items||[],participants:b.participants||[],splits:b.splits||[]}).eq('id',id).then(handleDbErr);
+}
+function delBill(id){
+  store.bills=store.bills.filter(function(b){return b.id!==id});
+  sb.from('bills').delete().eq('id',id).then(handleDbErr);
+}
+
+/* Wallet balance */
+function getWalletBalance(){
+  var allInc=store.incomes.reduce(function(s,i){return s+i.amount},0);
+  var allExp=store.expenses.reduce(function(s,e){return s+e.amount},0);
+  return store.walletInitialBalance+allInc-allExp;
+}
+function saveInitialBalance(bal){
+  store.walletInitialBalance=bal;
+  sb.from('wallet_settings').upsert([{user_id:state.user.id,initial_balance:bal}],{onConflict:'user_id'}).then(handleDbErr);
+}
+
+/* ══════════════════════════════════════════════════════
+   DATA LOADING
+   ══════════════════════════════════════════════════════ */
+async function loadUserData(uid){
+  try{
+    var results=await Promise.allSettled([
+      sb.from('participants').select('*').eq('user_id',uid).order('created_at',{ascending:true}),
+      sb.from('categories').select('*').eq('user_id',uid),
+      sb.from('expenses').select('*').eq('user_id',uid).order('date',{ascending:false}),
+      sb.from('incomes').select('*').eq('user_id',uid).order('date',{ascending:false}),
+      sb.from('bills').select('*').eq('user_id',uid).order('created_at',{ascending:false}),
+      sb.from('wallet_settings').select('*').eq('user_id',uid).maybeSingle()
+    ]);
+    function d(i){return results[i].value&&results[i].value.data?results[i].value.data:null}
+    store.participants=(d(0)||[]).map(function(x){return{id:x.id,userId:x.user_id,name:x.name,contact:x.contact}});
+    store.categories=(d(1)||[]).map(function(x){return{id:x.id,userId:x.user_id,name:x.name,type:x.type,isDefault:x.is_default}});
+    store.expenses=(d(2)||[]).map(function(x){return{id:x.id,userId:x.user_id,amount:parseFloat(x.amount),categoryId:x.category_id,date:x.date,note:x.note,isRecurring:x.is_recurring,recurringFrequency:x.recurring_frequency,createdAt:x.created_at}});
+    store.incomes=(d(3)||[]).map(function(x){return{id:x.id,userId:x.user_id,amount:parseFloat(x.amount),source:x.source,categoryId:x.category_id,date:x.date,note:x.note,isRecurring:x.is_recurring,recurringFrequency:x.recurring_frequency,createdAt:x.created_at}});
+    store.bills=(d(4)||[]).map(function(x){return{id:x.id,userId:x.user_id,title:x.title,totalAmount:parseFloat(x.total_amount),amountBeforeTax:x.amount_before_tax?parseFloat(x.amount_before_tax):undefined,tax:x.tax?parseFloat(x.tax):undefined,splitMethod:x.split_method,items:x.items||[],participants:x.participants||[],splits:x.splits||[],createdAt:x.created_at}});
+    store.walletInitialBalance=d(5)?parseFloat(d(5).initial_balance)||0:0;
+    if(store.categories.length===0)await initDefaultCats(uid);
+  }catch(err){console.error('loadUserData:',err);showToast('Failed to load data. Check connection.')}
+  state.loading=false;
+  render();
+}
+
+async function initDefaultCats(uid){
+  var cats=DEF_EXP_CATS.map(function(n){return{id:uuid(),user_id:uid,name:n,type:'expense',is_default:true}})
+    .concat(DEF_INC_CATS.map(function(n){return{id:uuid(),user_id:uid,name:n,type:'income',is_default:true}}));
+  var res=await sb.from('categories').insert(cats).select();
+  if(!res.error&&res.data){
+    store.categories=res.data.map(function(x){return{id:x.id,userId:x.user_id,name:x.name,type:x.type,isDefault:x.is_default}});
+  }
+}
+
+async function loadSession(session){
+  state.loading=true;render();
+  var uid=session.user.id;
+  var pr=await sb.from('profiles').select('username,created_at').eq('id',uid).maybeSingle();
+  state.user={
+    id:uid,
+    email:session.user.email,
+    username:pr.data?pr.data.username:session.user.email.split('@')[0],
+    createdAt:pr.data&&pr.data.created_at?pr.data.created_at:session.user.created_at
+  };
+  await loadUserData(uid);
+}
+
+/* ══════════════════════════════════════════════════════
+   AUTH HANDLERS
+   ══════════════════════════════════════════════════════ */
+window.toggleAuth=function(){authMode=authMode==='login'?'signup':'login';authErr='';render()};
+
+window.doAuth=async function(e){
+  e.preventDefault();
+  authLoading=true;authErr='';render();
+  var email=document.getElementById('a-email').value.trim();
+  var pw=document.getElementById('a-pw').value;
+
+  if(authMode==='login'){
+    var res=await sb.auth.signInWithPassword({email:email,password:pw});
+    if(res.error){authErr=res.error.message;authLoading=false;render()}
+    /* onAuthStateChange handles success */
+  } else {
+    var username=(document.getElementById('a-user').value||'').trim();
+    if(!username){authErr='Username required!';authLoading=false;render();return}
+    /* Check username */
+    var chk=await sb.from('profiles').select('id').eq('username',username);
+    if(chk.data&&chk.data.length>0){authErr='Username already taken!';authLoading=false;render();return}
+    var res=await sb.auth.signUp({email:email,password:pw});
+    if(res.error){authErr=res.error.message;authLoading=false;render();return}
+    if(res.data&&res.data.user){
+      await sb.from('profiles').insert([{id:res.data.user.id,username:username}]);
+      if(!res.data.session){
+        /* Email confirmation required */
+        authMode='confirm';authLoading=false;render();return;
+      }
+    }
+    authLoading=false;
+    /* If session returned immediately, onAuthStateChange fires */
+  }
+};
+
+window.doLogout=function(){logoutWarn=true;render()};
+window.doLogoutConfirm=async function(){
+  logoutWarn=false;
+  store.participants=[];store.categories=[];store.expenses=[];store.incomes=[];store.bills=[];store.walletInitialBalance=0;
+  await sb.auth.signOut();
+};
+window.logoutCancel=function(){logoutWarn=false;render()};
+window.nav=function(p){state.page=p;render()};
+
+/* ══════════════════════════════════════════════════════
+   BILL FORM STATE PRESERVATION
+   ══════════════════════════════════════════════════════ */
+function billSaveFormState(){
+  if(!billShowCreate)return;
+  var t=document.getElementById('b-title');
+  var tot=document.getElementById('b-total');
+  var bef=document.getElementById('b-before');
+  var tax=document.getElementById('b-tax');
+  if(t)billFormTitle=t.value;
+  if(tot)billFormTotal=tot.dataset&&tot.dataset.raw!==undefined?tot.dataset.raw:String(parseK(tot.value)||'');
+  if(bef)billFormBefore=bef.dataset&&bef.dataset.raw!==undefined?bef.dataset.raw:String(parseK(bef.value)||'');
+  if(tax)billFormTax=tax.dataset&&tax.dataset.raw!==undefined?tax.dataset.raw:String(parseK(tax.value)||'');
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER
+   ══════════════════════════════════════════════════════ */
+var app=document.getElementById('app');
+
+function render(){
+  if(billShowCreate)billSaveFormState();
+
+  if(state.loading){
+    app.innerHTML='<div class="loader"><div class="spinner"></div><p style="font-size:8px" class="text-primary">Loading trainer data…</p></div>';
+    return;
+  }
+  if(!configOk){renderSetup();return}
+  if(!state.user){renderAuth();return}
+
+  var html='<div class="flex flex-col" style="min-height:100vh">';
+  html+='<div class="top-bar"><span style="font-size:20px">PokéWallet</span><div class="flex items-center gap-2"><span style="font-size:20px">'+esc(state.user.username)+'</span><button onclick="doLogout()" style="font-size:20px;color:red;background:none;border:none;cursor:pointer;font-family:inherit">EXIT</button></div></div>';
+  html+='<div class="main-content">';
+  switch(state.page){
+    case'dashboard': html+=renderDashboard();break;
+    case'tracker':   html+=renderTracker();break;
+    case'split-bill':html+=renderSplitBill();break;
+    case'participants':html+=renderParticipants();break;
+    case'profile':   html+=renderProfile();break;
+  }
+  html+='</div>';
+  var navs=[{k:'dashboard',i:'🏠',l:'HOME'},{k:'tracker',i:'💰',l:'TRACK'},{k:'split-bill',i:'📋',l:'SPLIT'},{k:'participants',i:'👥',l:'PARTY'},{k:'profile',i:'🎒',l:'BAG'}];
+  html+='<div class="bottom-nav">'+navs.map(function(n){return'<button class="'+(state.page===n.k?'active':'')+'" onclick="nav(\''+n.k+'\')">'+n.i+'<span class="lbl">'+n.l+'</span></button>'}).join('')+'</div>';
+
+  /* Logout overlay */
+  if(logoutWarn){
+    html+='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px">'
+      +'<div class="pb bg-card p-4 text-center" style="max-width:320px;width:100%">'
+      +'<p style="font-size:20px;margin-bottom:8px">⚠️</p>'
+      +'<p style="font-size:10px" class="text-primary mb-2">LOG OUT?</p>'
+      +'<p style="font-size:8px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
+      +'<div class="flex gap-2 mt-2">'
+      +'<button onclick="doLogoutConfirm()" class="btn flex-1" style="background:var(--red);color:#fff;font-size:8px;border-color:var(--red)">YES, EXIT</button>'
+      +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--bg);font-size:8px">CANCEL</button>'
+      +'</div></div></div>';
+  }
+
+  /* Toast */
+  if(state.toast){
+    var bg=state.toast.type==='success'?'var(--green)':'var(--red)';
+    html+='<div class="toast" style="background:'+bg+'">'+esc(state.toast.msg)+'</div>';
+  }
+
+  html+='</div>';
+  app.innerHTML=html;
+  if(state.page==='dashboard')drawCharts();
+}
+
+/* ── Setup instructions ─────────────────────────────── */
+function renderSetup(){
+  app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="max-width:480px;width:100%">'
+    +'<div class="pb bg-card p-4 space-y-2">'
+    +'<h1 style="font-size:14px" class="text-primary text-center">⚙️ SETUP REQUIRED</h1>'
+    +'<p style="font-size:8px" class="text-muted text-center">Open <strong>index.html</strong> and set these two variables at the top of the &lt;script&gt; tag:</p>'
+    +'<div class="pb-sm bg-bg p-3" style="font-size:7px;font-family:monospace;color:var(--accent)">'
+    +'var SUPABASE_URL = \'https://xxxxx.supabase.co\';<br>'
+    +'var SUPABASE_ANON_KEY = \'eyJ...\';</div>'
+    +'<p style="font-size:7px" class="text-muted">Find these in your <strong>Supabase Dashboard → Settings → API</strong>.</p>'
+    +'<p style="font-size:7px" class="text-muted">Make sure you have run the <strong>supabase-schema.sql</strong> file in your Supabase SQL Editor first.</p>'
+    +'</div></div></div>';
+}
+
+/* ── Auth screen ────────────────────────────────────── */
+function renderAuth(){
+  if(authMode==='confirm'){
+    app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div class="pb bg-card p-4 text-center" style="max-width:380px;width:100%"><p style="font-size:30px;margin-bottom:8px">📬</p><p style="font-size:10px" class="text-primary mb-2">CHECK YOUR EMAIL</p><p style="font-size:8px" class="text-muted">We sent a confirmation link. Confirm your email then come back to log in.</p><button onclick="authBackToLogin()" class="btn mt-2 w-full" style="background:var(--primary);color:var(--primary-fg);font-size:8px">▶ BACK TO LOGIN</button></div></div>';
+    return;
+  }
+  var isLogin=authMode==='login';
+  app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:100%;max-width:400px"><div class="text-center mb-2"><h1 style="font-size:18px" class="text-primary">⚡ PokéWallet ⚡</h1><p style="font-size:8px" class="text-muted">Gotta Track \'Em All!</p></div>'
+    +'<div class="pb bg-card p-4"><h2 style="font-size:11px" class="text-center mb-2">'+(isLogin?'► TRAINER LOGIN':'► NEW TRAINER')+'</h2>'
+    +'<form onsubmit="doAuth(event)" class="space-y-2">'
+    +(!isLogin?'<div class="form-group"><label>USERNAME</label><input id="a-user" class="pb-sm" placeholder="Ash Ketchum" autocomplete="username"/></div>':'')
+    +'<div class="form-group"><label>EMAIL</label><input id="a-email" type="email" class="pb-sm" placeholder="ash@pokemon.com" required autocomplete="email"/></div>'
+    +'<div class="form-group"><label>PASSWORD</label><input id="a-pw" type="password" class="pb-sm" placeholder="••••••••" required minlength="6" autocomplete="'+(isLogin?'current-password':'new-password')+'"/></div>'
+    +(authErr?'<p style="font-size:8px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
+    +'<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:10px;padding:10px"'+(authLoading?' disabled':'')+'>'+( authLoading?'…LOADING…':(isLogin?'▶ START ADVENTURE':'▶ CREATE TRAINER'))+'</button>'
+    +'</form>'
+    +'<div class="text-center mt-2"><button onclick="toggleAuth()" style="font-size:8px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">'+(isLogin?'New trainer? Sign up!':'Already a trainer? Log in!')+'</button></div>'
+    +'</div><p class="text-center text-muted mt-1" style="font-size:6px">v3.0 — Cloud-powered by Supabase</p>'
+    +'</div></div>';
+}
+window.authBackToLogin=function(){authMode='login';authErr='';render()};
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD
+   ══════════════════════════════════════════════════════ */
+function renderDashboard(){
+  var now=new Date(),m=now.getMonth(),y=now.getFullYear();
+  var exps=getExp(),incs=getInc(),bills=getBills();
+  var mExp=exps.filter(function(e){var d=new Date(e.date+'T00:00:00');return d.getMonth()===m&&d.getFullYear()===y});
+  var mInc=incs.filter(function(i){var d=new Date(i.date+'T00:00:00');return d.getMonth()===m&&d.getFullYear()===y});
+  var tExp=mExp.reduce(function(s,e){return s+e.amount},0);
+  var tInc=mInc.reduce(function(s,i){return s+i.amount},0);
+  var allInc=store.incomes.reduce(function(s,i){return s+i.amount},0);
+  var allExp=store.expenses.reduce(function(s,e){return s+e.amount},0);
+  var walletBal=store.walletInitialBalance+allInc-allExp;
+  var cats=getCats('expense');
+  function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'???'}
+
+  var h='<div class="space-y-3">';
+  h+='<div class="poke-dialog"><p style="font-size:18px" class="text-muted mb-1">PROF. OAK says:</p><p style="font-size:20px">Welcome back, <span class="text-primary">'+esc(state.user.username)+'</span>! Here\'s your PokéDex report!</p></div>';
+
+  /* Stats cards */
+  h+='<div class="grid grid-3 gap-2">';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:6px" class="text-muted mb-1">MO. INCOME</p><p style="font-size:9px" class="text-green">'+idr(tInc)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:6px" class="text-muted mb-1">MO. EXPENSE</p><p style="font-size:9px" class="text-red">'+idr(tExp)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center" onclick="nav(\'profile\')" style="cursor:pointer" title="Tap to edit balance">';
+  h+='<p style="font-size:6px" class="text-muted mb-1">WALLET ⚙</p><p style="font-size:9px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
+  h+='</div>';
+
+  /* Chart */
+  var today=new Date().toISOString().slice(0,10);
+  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">📊 EXPENSE CHART</p>';
+  h+='<div class="tab-bar">';
+  [{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'3month',l:'3MO'},{k:'year',l:'YEAR'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
+    h+='<button class="'+(state.chartPeriod===p.k?'active':'')+'" onclick="setChart(\''+p.k+'\')">'+p.l+'</button>';
+  });
+  h+='</div>';
+
+  if(state.chartPeriod==='custom'){
+    h+='<div class="flex gap-1 mt-1 items-end">';
+    h+='<div style="flex:1"><label style="font-size:6px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="chart-from" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomFrom)+'"/></div>';
+    h+='<div style="flex:1"><label style="font-size:6px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="chart-to" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomTo)+'"/></div>';
+    h+='<button onclick="applyCustomRange()" class="btn" style="font-size:7px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
+    h+='</div><p style="font-size:6px" class="text-muted mt-1">⚡ Max 30 days</p>';
+  }
+
+  if(state.chartPeriod!=='custom'||(state.chartCustomFrom&&state.chartCustomTo)){
+    h+='<canvas id="chart-main" height="160"></canvas>';
+  }
+  h+='<div class="flex justify-end mt-1" style="font-size:6px"><span class="text-red">■ Expense</span></div></div>';
+
+  /* Battle stats */
+  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
+  h+='<div class="flex justify-between" style="font-size:8px"><span>Bills Split</span><span class="text-accent">'+bills.length+'</span></div>';
+  h+='<div class="flex justify-between" style="font-size:8px"><span>This Month Transactions</span><span class="text-accent">'+(mExp.length+mInc.length)+'</span></div>';
+  h+='</div></div>';
+
+  /* Recent expenses */
+  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
+  if(exps.length===0)h+='<p style="font-size:7px" class="text-muted">No wild expenses appeared yet…</p>';
+  else exps.slice(0,3).forEach(function(e){
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
+      +'<div><span>'+esc(getCN(e.categoryId))+(e.note?' – '+esc(e.note):'')+'</span>'
+      +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(e.date)+'</p></div>'
+      +'<span class="text-red" style="white-space:nowrap;margin-left:6px">-'+idr(e.amount)+'</span></div>';
+  });
+  h+='</div>';
+
+  /* Recent income */
+  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">✨ RECENT INCOME</p>';
+  if(incs.length===0)h+='<p style="font-size:7px" class="text-muted">No PokéCoins earned yet…</p>';
+  else incs.slice(0,3).forEach(function(i){
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
+      +'<div><span>'+esc(i.source)+(i.note?' – '+esc(i.note):'')+'</span>'
+      +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(i.date)+'</p></div>'
+      +'<span class="text-green" style="white-space:nowrap;margin-left:6px">+'+idr(i.amount)+'</span></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+
+window.setChart=function(p){state.chartPeriod=p;render()};
+window.applyCustomRange=function(){
+  var from=document.getElementById('chart-from');
+  var to=document.getElementById('chart-to');
+  if(!from||!to){return}
+  var f=from.value,t=to.value;
+  if(!f||!t){showToast('Please pick both dates');return}
+  var diff=(new Date(t+' 00:00:00')-new Date(f+' 00:00:00'))/(864e5);
+  if(diff<0){showToast('End date must be after start date');return}
+  if(diff>30){showToast('Maximum range is 30 days');return}
+  state.chartCustomFrom=f;state.chartCustomTo=t;render();
+};
+
+function drawCharts(){
+  var c=document.getElementById('chart-main');if(!c)return;
+  var ctx=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=160;
+  var exps=getExp();
+  var period=state.chartPeriod;
+  var now=new Date();
+  var labels=[],expData=[];
+
+  if(period==='week'){
+    for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(['Su','Mo','Tu','We','Th','Fr','Sa'][d.getDay()]);expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
+  }else if(period==='month'){
+    for(var i=29;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(d.getDate().toString());expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
+  }else if(period==='3month'){
+    for(var i=11;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i*7);var wStart=new Date(d);wStart.setDate(wStart.getDate()-6);var ws=wStart.toISOString().slice(0,10),we=d.toISOString().slice(0,10);labels.push('W'+(12-i));expData.push(exps.filter(function(e){return e.date>=ws&&e.date<=we}).reduce(function(s,e){return s+e.amount},0))}
+  }else if(period==='year'){
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    for(var i=11;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);labels.push(months[d.getMonth()]);var ym=d.toISOString().slice(0,7);expData.push(exps.filter(function(e){return e.date.startsWith(ym)}).reduce(function(s,e){return s+e.amount},0))}
+  }else if(period==='custom'&&state.chartCustomFrom&&state.chartCustomTo){
+    var cur=new Date(state.chartCustomFrom+'T00:00:00');
+    var endD=new Date(state.chartCustomTo+'T00:00:00');
+    while(cur<=endD&&labels.length<=31){
+      var ds=cur.toISOString().slice(0,10);
+      labels.push((cur.getMonth()+1)+'/'+(cur.getDate()));
+      expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0));
+      cur.setDate(cur.getDate()+1);
+    }
+  }else{return}
+
+  var max=Math.max.apply(null,expData.concat([1]));
+  var W=c.width,H=c.height,pad=30,gW=W-pad*2,gH=H-pad*2;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(139,139,139,0.2)';ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=pad+gH*(1-i/4);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke()}
+  var n=labels.length,barW=gW/n;
+  for(var i=0;i<n;i++){
+    var x=pad+i*barW,bw=barW*0.7;
+    var eh=expData[i]/max*gH;
+    ctx.fillStyle='#e84040';ctx.fillRect(x+barW*0.15,pad+gH-eh,bw,Math.max(eh,expData[i]>0?1:0));
+    if(n<=14||(i%Math.ceil(n/10)===0)){ctx.fillStyle='#8b8b8b';ctx.font='6px "Press Start 2P"';ctx.textAlign='center';ctx.fillText(labels[i],x+barW/2,H-4)}
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   TRACKER
+   ══════════════════════════════════════════════════════ */
+function renderTracker(){
+  var tab=trackerTab;
+  var items=tab==='expense'?getExp():getInc();
+  var cats=getCats(tab);
+  function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'???'}
+
+  var h='<div class="space-y-3">';
+  h+='<div class="flex items-center justify-between"><h2 style="font-size:20px">'+(tab==='expense'?'💸 EXPENSES':'💰 INCOME')+'</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:8px" onclick="trackerToggleForm()">'+(trackerShowForm?'✕ CANCEL':'+ ADD')+'</button></div>';
+  h+='<div class="tab-bar"><button class="'+(tab==='expense'?'active':'')+'" style="font-size:8px" onclick="setTrackerTab(\'expense\')">💸 EXPENSES</button><button class="'+(tab==='income'?'active':'')+'" style="font-size:8px" onclick="setTrackerTab(\'income\')">💰 INCOME</button></div>';
+
+  if(trackerShowForm){
+    h+='<form onsubmit="trackerAdd(event)" class="pb bg-card p-3 space-y-2">';
+    h+='<div class="form-group"><label>AMOUNT (Rp)</label><input id="t-amt" type="text" inputmode="numeric" class="pb-sm" placeholder="0" required oninput="numfmt(this)"/></div>';
+    if(tab==='income')h+='<div class="form-group"><label>SOURCE</label><input id="t-src" class="pb-sm" placeholder="Gym Leader salary…" required/></div>';
+    h+='<div class="form-group"><label>CATEGORY</label><div class="flex gap-1"><select id="t-cat" class="pb-sm" required style="flex:1"><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join('')+'</select><button type="button" class="btn" style="background:var(--accent);color:#fff;font-size:7px" onclick="trackerToggleNewCat()">+</button></div></div>';
+    if(trackerShowNewCat){h+='<div class="flex gap-1"><input id="t-newcat" class="pb-sm" placeholder="New category" style="flex:1"/><button type="button" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px" onclick="trackerAddCat()">ADD</button></div>'}
+    h+='<div class="form-group"><label>DATE</label><input id="t-date" type="date" class="pb-sm" value="'+new Date().toISOString().slice(0,10)+'"/></div>';
+    h+='<div class="form-group"><label>NOTE (optional)</label><input id="t-note" class="pb-sm" placeholder="'+(tab==='expense'?'Battle at PokéMart…':'Won the Pokémon League…')+'"/></div>';
+    h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:8px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
+    h+='<button type="submit" class="btn w-full" style="background:var(--green);color:#fff;font-size:8px;padding:8px">▶ '+(tab==='expense'?'CATCH EXPENSE':'COLLECT POKÉCOINS')+'</button>';
+    h+='</form>';
+  }
+
+  h+='<div class="space-y-1">';
+  if(items.length===0){h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">'+(tab==='expense'?'No wild expenses appeared!':'No PokéCoins earned yet!')+'</p></div>'}
+  else items.forEach(function(it){
+    if(trackerEditId===it.id){
+      h+='<div class="pb-sm bg-card p-2 space-y-1">';
+      h+='<p style="font-size:7px" class="text-primary mb-1">✏️ EDITING ENTRY</p>';
+      h+='<form onsubmit="trackerUpdate(event,\''+it.id+'\',\''+tab+'\')" class="space-y-1">';
+      h+='<div class="form-group"><label style="font-size:6px">AMOUNT (Rp)</label><input id="te-amt" type="text" inputmode="numeric" class="pb-sm" value="'+fmtDisp(it.amount)+'" required oninput="numfmt(this)" data-raw="'+Math.round(it.amount)+'"/></div>';
+      if(tab==='income')h+='<div class="form-group"><label style="font-size:6px">SOURCE</label><input id="te-src" class="pb-sm" value="'+esc(it.source||'')+'"/></div>';
+      h+='<div class="form-group"><label style="font-size:6px">CATEGORY</label><select id="te-cat" class="pb-sm" required><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===it.categoryId?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div>';
+      h+='<div class="form-group"><label style="font-size:6px">DATE</label><input id="te-date" type="date" class="pb-sm" value="'+(it.date||new Date().toISOString().slice(0,10))+'"/></div>';
+      h+='<div class="form-group"><label style="font-size:6px">NOTE</label><input id="te-note" class="pb-sm" value="'+esc(it.note||'')+'"/></div>';
+      h+='<div class="flex gap-1 mt-1"><button type="submit" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:7px">SAVE</button><button type="button" class="btn" style="background:var(--bg);font-size:7px" onclick="trackerCancelEdit()">CANCEL</button></div>';
+      h+='</form></div>';
+    }else{
+      h+='<div class="pb-sm bg-card p-2 flex items-center justify-between">'
+        +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:9px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:7px" class="text-accent">🔄</span>':'')+'</div>'
+        +'<p style="font-size:6px" class="text-muted">'+fmtDate(it.date)+(it.note?' · '+esc(it.note):'')+'</p></div>'
+        +'<div class="flex items-center gap-1"><span style="font-size:9px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
+        +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
+        +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
+    }
+  });
+  h+='</div></div>';
+  return h;
+}
+
+window.setTrackerTab=function(t){trackerTab=t;trackerShowForm=false;trackerShowNewCat=false;trackerEditId=null;render()};
+window.trackerToggleForm=function(){trackerShowForm=!trackerShowForm;trackerShowNewCat=false;trackerEditId=null;render()};
+window.trackerToggleNewCat=function(){trackerShowNewCat=!trackerShowNewCat;render()};
+window.trackerAddCat=function(){
+  var v=document.getElementById('t-newcat');if(!v||!v.value.trim())return;
+  var c=addCat(v.value.trim(),trackerTab);trackerShowNewCat=false;render();
+  setTimeout(function(){var s=document.getElementById('t-cat');if(s)s.value=c.id},0);
+};
+window.trackerAdd=function(e){
+  e.preventDefault();
+  var amt=parseK(document.getElementById('t-amt').value)||0;
+  var cat=document.getElementById('t-cat').value;
+  var date=document.getElementById('t-date').value;
+  var note=document.getElementById('t-note').value;
+  var rec=document.getElementById('t-rec').checked;
+  var freq=document.getElementById('t-freq').value;
+  if(!amt||!cat)return;
+  if(trackerTab==='expense'){addExp({amount:amt,categoryId:cat,date:date,note:note||undefined,isRecurring:rec,recurringFrequency:rec?freq:undefined})}
+  else{var src=document.getElementById('t-src');if(!src||!src.value)return;addInc({amount:amt,source:src.value,categoryId:cat,date:date,note:note||undefined,isRecurring:rec,recurringFrequency:rec?freq:undefined})}
+  trackerShowForm=false;render();
+};
+window.trackerEdit=function(id,type){trackerEditId=id;trackerEditType=type;trackerShowForm=false;render()};
+window.trackerCancelEdit=function(){trackerEditId=null;render()};
+window.trackerUpdate=function(e,id,type){
+  e.preventDefault();
+  var amt=parseK((document.getElementById('te-amt')||{}).value||'');
+  var cat=(document.getElementById('te-cat')||{}).value;
+  var date=(document.getElementById('te-date')||{}).value;
+  var note=((document.getElementById('te-note')||{}).value||'');
+  if(!amt||!cat)return;
+  if(type==='expense'){updExp(id,{amount:amt,categoryId:cat,date:date,note:note||undefined})}
+  else{var src=((document.getElementById('te-src')||{}).value||'');updInc(id,{amount:amt,source:src,categoryId:cat,date:date,note:note||undefined})}
+  trackerEditId=null;trackerEditType=null;render();
+};
+window.trackerDel=function(id,type){if(type==='expense')delExp(id);else delInc(id);if(trackerEditId===id)trackerEditId=null;render()};
+
+/* ══════════════════════════════════════════════════════
+   SPLIT BILL
+   ══════════════════════════════════════════════════════ */
+function renderSplitBill(){
+  var parts=getParts(),bills=getBills();
+  function getPN(id){var p=parts.find(function(x){return x.id===id});return p?p.name:'???'}
+
+  var h='<div class="space-y-3"><div class="flex items-center justify-between"><h2 style="font-size:20px">📋 SPLIT BILL</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:8px" onclick="billToggle()">'+(billShowCreate?'✕ CANCEL':'+ NEW BILL')+'</button></div>';
+
+  if(billView){
+    h+='<div class="pb bg-card p-3 space-y-2"><div class="flex justify-between items-center"><h3 style="font-size:10px" class="text-primary">'+esc(billView.title)+'</h3><div class="flex gap-1"><button onclick="billEditExisting(\''+billView.id+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️ EDIT</button><button onclick="billCloseView()" style="font-size:7px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">✕</button></div></div>';
+    h+='<div style="font-size:8px" class="space-y-1"><p>Total: <span class="text-accent">'+idr(billView.totalAmount)+'</span></p>'+(billView.tax?'<p>Tax: '+idr(billView.tax)+'</p>':'')+'<p>Method: '+billView.splitMethod+'</p></div>';
+    h+='<div class="mt-1"><p style="font-size:7px" class="text-muted mb-1">SPLIT SUMMARY:</p>'+billView.splits.map(function(s){return'<div class="flex justify-between pb-sm p-1 mb-1 bg-bg" style="font-size:8px"><span>'+esc(getPN(s.participantId))+'</span><span class="text-red">'+idr(s.amount)+'</span></div>'}).join('')+'</div></div>';
+  }
+
+  if(billShowCreate){
+    h+='<div class="pb bg-card p-3 space-y-2">';
+    if(billEditId)h+='<div class="info-box">✏️ EDITING EXISTING BILL</div>';
+    h+='<div class="form-group"><label>BILL TITLE</label><input id="b-title" class="pb-sm" placeholder="Dinner at PokéCenter" value="'+esc(billFormTitle)+'"/></div>';
+    h+='<div class="grid grid-3 gap-1">'
+      +'<div class="form-group"><label style="font-size:6px">TOTAL (after tax)</label><input id="b-total" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTotal)+'" data-raw="'+esc(billFormTotal)+'"/></div>'
+      +'<div class="form-group"><label style="font-size:6px">BEFORE TAX (opt)</label><input id="b-before" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormBefore)+'" data-raw="'+esc(billFormBefore)+'"/></div>'
+      +'<div class="form-group"><label style="font-size:6px">TAX (opt)</label><input id="b-tax" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTax)+'" data-raw="'+esc(billFormTax)+'"/></div>'
+      +'</div>';
+    h+='<div class="form-group"><label>SPLIT METHOD</label><div class="grid grid-4 gap-1 mt-1">'+['equal','percentage','exact','item-based'].map(function(m){return'<button onclick="billSetMethod(\''+m+'\')" class="pb-sm" style="font-size:9px;padding:4px;cursor:pointer;background:'+(billMethod===m?'var(--primary)':'var(--bg)')+';color:'+(billMethod===m?'var(--primary-fg)':'var(--fg)')+'">'+m.toUpperCase()+'</button>'}).join('')+'</div></div>';
+    h+='<div class="form-group"><label>PARTICIPANTS</label><div class="flex flex-wrap gap-1 mt-1">'+parts.map(function(p){return'<button onclick="billTogglePart(\''+p.id+'\')" class="pb-sm" style="font-size:7px;padding:3px 6px;cursor:pointer;background:'+(billSelParts.indexOf(p.id)>=0?'var(--primary)':'var(--bg)')+';color:'+(billSelParts.indexOf(p.id)>=0?'var(--primary-fg)':'var(--fg)')+'">'+esc(p.name)+'</button>'}).join('')+'</div>';
+    h+='<div class="flex gap-1 mt-1"><input id="b-qname" class="pb-sm" style="flex:1" placeholder="Quick add trainer…"/><button class="btn" style="background:var(--accent);color:#fff;font-size:7px" onclick="billQuickAdd()">+</button></div></div>';
+
+    if(billMethod==='item-based'){
+      h+='<div class="form-group"><div class="flex justify-between items-center"><label>ITEMS</label><button onclick="billAddItem()" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">+ Add Item</button></div>';
+      billItems.forEach(function(item,idx){
+        h+='<div class="pb-sm bg-bg p-2 mt-1 space-y-1"><div class="flex gap-1"><input value="'+esc(item.name)+'" onchange="billUpdItem('+idx+',\'name\',this.value)" class="pb-sm" style="flex:1;font-size:8px" placeholder="Item name"/><input type="text" inputmode="numeric" value="'+fmtDisp(item.price)+'" oninput="numfmt(this);billUpdItem('+idx+',\'price\',parseK(this.value))" class="pb-sm" style="width:80px;font-size:8px" placeholder="Price"/><input type="number" value="'+item.quantity+'" onchange="billUpdItem('+idx+',\'quantity\',this.value)" class="pb-sm" style="width:40px;font-size:8px" min="1"/><button onclick="billRemItem('+idx+')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div>';
+        h+='<div class="flex flex-wrap gap-1">'+billSelParts.map(function(pid){var a=item.assignments.find(function(x){return x.participantId===pid});var q=a?a.quantity:0;return'<div class="flex items-center gap-1"><span style="font-size:6px" class="text-muted">'+esc(getPN(pid))+':</span><input type="number" value="'+(q||'')+'" min="0" onchange="billAssignItem('+idx+',\''+pid+'\',this.value)" class="pb-sm" style="width:30px;font-size:7px;text-align:center;padding:2px"/></div>'}).join('')+'</div>';
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+
+    if((billMethod==='percentage'||billMethod==='exact')&&billSelParts.length>0){
+      h+='<div class="form-group"><label>'+(billMethod==='percentage'?'SET PERCENTAGES':'SET EXACT AMOUNTS')+'</label>';
+      billSelParts.forEach(function(pid){
+        var cur=billSplits.find(function(s){return s.participantId===pid});
+        var field=billMethod==='percentage'?'percentage':'amount';
+        var curVal=cur?cur[field]||'':'';
+        if(billMethod==='exact'){
+          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="text" inputmode="numeric" value="'+fmtDisp(curVal)+'" oninput="numfmt(this)" onchange="billUpdSplitAmt(\''+pid+'\',this)" class="pb-sm" style="width:100px;font-size:8px;text-align:right" placeholder="Rp"/></div>';
+        }else{
+          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="number" value="'+curVal+'" onchange="billUpdSplit(\''+pid+'\',\'percentage\',this.value)" class="pb-sm" style="width:80px;font-size:8px;text-align:right" placeholder="%"/></div>';
+        }
+      });
+      h+='</div>';
+    }
+
+    if(billMethod==='equal'&&billSelParts.length>0){
+      var each=parseK(billFormTotal)/billSelParts.length||0;
+      h+='<div class="pb-sm bg-bg p-2"><p style="font-size:7px" class="text-muted">Equal split: each pays <span class="text-accent">'+idr(each)+'</span></p></div>';
+    }
+
+    h+='<button onclick="billCreate()" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:9px;padding:8px">▶ '+(billEditId?'UPDATE BILL':'CREATE BILL')+'</button>';
+    h+='</div>';
+  }
+
+  h+='<div class="space-y-1"><p style="font-size:8px" class="text-muted">BILL HISTORY</p>';
+  if(bills.length===0)h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">No bills yet! Create one above.</p></div>';
+  else bills.forEach(function(b){
+    h+='<div class="pb-sm bg-card p-2 flex items-center justify-between" style="cursor:pointer" onclick="billViewBill(\''+b.id+'\')"><div><span style="font-size:8px" class="text-primary">'+esc(b.title)+'</span><p style="font-size:6px" class="text-muted">'+b.splitMethod+' · '+b.participants.length+' trainers</p></div><div class="flex items-center gap-1"><span style="font-size:9px" class="text-accent">'+idr(b.totalAmount)+'</span><button onclick="event.stopPropagation();billEditExisting(\''+b.id+'\')" style="font-size:8px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button><button onclick="event.stopPropagation();billDel(\''+b.id+'\')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
+  });
+  h+='</div></div>';
+  return h;
+}
+
+window.billToggle=function(){billShowCreate=!billShowCreate;billView=null;billItems=[];billSplits=[];billSelParts=[];billMethod='equal';billFormTitle='';billFormTotal='';billFormBefore='';billFormTax='';billEditId=null;render()};
+window.billCloseView=function(){billView=null;render()};
+window.billSetMethod=function(m){billMethod=m;billItems=[];billSplits=[];render()};
+window.billTogglePart=function(id){var idx=billSelParts.indexOf(id);if(idx>=0)billSelParts.splice(idx,1);else billSelParts.push(id);render()};
+window.billQuickAdd=function(){
+  var n=document.getElementById('b-qname');if(!n||!n.value.trim())return;
+  var name=n.value.trim();
+  var dup=getParts().find(function(x){return x.name.toLowerCase()===name.toLowerCase()});
+  var p=dup||addPart(name);
+  if(billSelParts.indexOf(p.id)<0)billSelParts.push(p.id);
+  render();
+};
+window.billAddItem=function(){billItems.push({id:uuid(),name:'',price:0,quantity:1,assignments:[]});render()};
+window.billUpdItem=function(idx,f,v){if(f==='price')billItems[idx].price=parseFloat(v)||0;else if(f==='quantity')billItems[idx].quantity=parseInt(v)||1;else billItems[idx][f]=v};
+window.billRemItem=function(idx){billItems.splice(idx,1);render()};
+window.billAssignItem=function(idx,pid,v){var item=billItems[idx];item.assignments=item.assignments.filter(function(a){return a.participantId!==pid});var q=parseInt(v)||0;if(q>0)item.assignments.push({participantId:pid,quantity:q})};
+window.billUpdSplit=function(pid,field,v){
+  var val=parseFloat(v)||0;
+  billSplits=billSplits.filter(function(s){return s.participantId!==pid});
+  if(field==='percentage'){var tot=parseK((document.getElementById('b-total')||{}).value||'0');billSplits.push({participantId:pid,percentage:val,amount:Math.round(tot*val/100*100)/100})}
+  else billSplits.push({participantId:pid,amount:val});
+};
+window.billUpdSplitAmt=function(pid,el){
+  var val=parseK(el.value)||0;
+  billSplits=billSplits.filter(function(s){return s.participantId!==pid});
+  billSplits.push({participantId:pid,amount:val});
+};
+window.billViewBill=function(id){billView=getBills().find(function(b){return b.id===id})||null;billShowCreate=false;billEditId=null;render()};
+window.billDel=function(id){delBill(id);if(billView&&billView.id===id)billView=null;render()};
+window.billEditExisting=function(id){
+  var b=getBills().find(function(x){return x.id===id});if(!b)return;
+  billEditId=id;billShowCreate=true;billView=null;
+  billMethod=b.splitMethod||'equal';
+  billSelParts=b.participants?b.participants.slice():[];
+  billItems=b.items?b.items.map(function(it){return Object.assign({},it,{assignments:it.assignments?it.assignments.slice():[]})}):[]; 
+  billSplits=b.splits?b.splits.slice():[];
+  billFormTitle=b.title||'';
+  billFormTotal=b.totalAmount?String(Math.round(b.totalAmount)):'';
+  billFormBefore=b.amountBeforeTax?String(Math.round(b.amountBeforeTax)):'';
+  billFormTax=b.tax?String(Math.round(b.tax)):'';
+  render();
+};
+window.billCreate=function(){
+  var title=(document.getElementById('b-title')||{}).value||'';
+  var total=parseK((document.getElementById('b-total')||{}).value)||0;
+  var beforeRaw=(document.getElementById('b-before')||{}).value||'';
+  var before=beforeRaw?parseK(beforeRaw):undefined;
+  var taxRaw=(document.getElementById('b-tax')||{}).value||'';
+  var tax=taxRaw?parseK(taxRaw):undefined;
+  if(!title||!total||billSelParts.length===0){showToast('Fill title, total, and select participants');return}
+  var splits=[];
+  if(billMethod==='equal'){var each=total/billSelParts.length;splits=billSelParts.map(function(pid){return{participantId:pid,amount:Math.round(each*100)/100}})}
+  else if(billMethod==='item-based'){
+    var subtotal=billItems.reduce(function(s,it){return s+it.price*it.quantity},0);
+    var taxR=subtotal>0?(tax||0)/subtotal:0;
+    var pt={};billSelParts.forEach(function(pid){pt[pid]=0});
+    billItems.forEach(function(it){it.assignments.forEach(function(a){var c=it.price*a.quantity;pt[a.participantId]=(pt[a.participantId]||0)+c+c*taxR})});
+    splits=billSelParts.map(function(pid){return{participantId:pid,amount:Math.round((pt[pid]||0)*100)/100}});
+  }else splits=billSplits.slice();
+  var billData={title:title,totalAmount:total,amountBeforeTax:before,tax:tax,splitMethod:billMethod,items:billItems,participants:billSelParts,splits:splits};
+  if(billEditId){updBill(billEditId,billData)}else{addBill(billData)}
+  billEditId=null;billShowCreate=false;billFormTitle='';billFormTotal='';billFormBefore='';billFormTax='';billItems=[];billSplits=[];billSelParts=[];render();
+};
+
+/* ══════════════════════════════════════════════════════
+   PARTICIPANTS
+   ══════════════════════════════════════════════════════ */
+function renderParticipants(){
+  var parts=getParts();
+  var h='<div class="space-y-3"><h2 style="font-size:11px">👥 PARTY MEMBERS</h2>';
+  h+='<form onsubmit="partAdd(event)" class="pb bg-card p-3 space-y-2"><p style="font-size:8px" class="text-muted">Add a new trainer to your party!</p>';
+  if(partNameErr)h+='<div class="warn-box">⚠️ '+esc(partNameErr)+'</div>';
+  h+='<div class="flex gap-1"><input id="p-name" class="pb-sm" style="flex:1" placeholder="Name" required/><input id="p-contact" class="pb-sm" style="flex:1" placeholder="Contact (optional)"/></div>';
+  h+='<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:8px;padding:8px">▶ ADD TO PARTY</button></form>';
+  h+='<div class="space-y-1">';
+  if(parts.length===0)h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">Your party is empty! Add trainers above.</p></div>';
+  else parts.forEach(function(p){
+    if(partEditId===p.id){
+      h+='<div class="pb-sm bg-card p-2 space-y-1">';
+      if(partNameErr)h+='<div class="warn-box">⚠️ '+esc(partNameErr)+'</div>';
+      h+='<div class="flex gap-1"><input id="pe-name" class="pb-sm" style="flex:1" value="'+esc(p.name)+'"/><input id="pe-contact" class="pb-sm" style="flex:1" value="'+esc(p.contact||'')+'" placeholder="Contact"/></div>';
+      h+='<div class="flex gap-1"><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px" onclick="partSave(\''+p.id+'\')">SAVE</button><button class="btn" style="background:var(--bg);color:var(--muted);font-size:7px" onclick="partCancelEdit()">CANCEL</button></div></div>';
+    }else{
+      h+='<div class="pb-sm bg-card p-2 flex items-center justify-between"><div><span style="font-size:9px">'+esc(p.name)+'</span>'+(p.contact?'<span style="font-size:7px" class="text-muted"> 📱 '+esc(p.contact)+'</span>':'')+'</div><div class="flex gap-1"><button onclick="partEdit(\''+p.id+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">EDIT</button><button onclick="partDel(\''+p.id+'\')" style="font-size:7px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">DEL</button></div></div>';
+    }
+  });
+  h+='</div></div>';
+  return h;
+}
+
+window.partAdd=function(e){
+  e.preventDefault();
+  var n=document.getElementById('p-name').value.trim();if(!n)return;
+  if(getParts().some(function(p){return p.name.toLowerCase()===n.toLowerCase()})){partNameErr='Trainer "'+n+'" is already in your party!';render();return}
+  partNameErr='';
+  addPart(n,document.getElementById('p-contact').value.trim()||undefined);
+  render();
+};
+window.partEdit=function(id){partEditId=id;partNameErr='';render()};
+window.partCancelEdit=function(){partEditId=null;partNameErr='';render()};
+window.partSave=function(id){
+  var n=document.getElementById('pe-name').value.trim();if(!n)return;
+  if(getParts().filter(function(p){return p.id!==id}).some(function(p){return p.name.toLowerCase()===n.toLowerCase()})){partNameErr='Trainer "'+n+'" is already in your party!';render();return}
+  partNameErr='';
+  updPart(id,{name:n,contact:document.getElementById('pe-contact').value.trim()||undefined});
+  partEditId=null;render();
+};
+window.partDel=function(id){delPart(id);render()};
+
+/* ══════════════════════════════════════════════════════
+   PROFILE / BAG
+   ══════════════════════════════════════════════════════ */
+function renderProfile(){
+  var u=state.user;
+  var parts=getParts(),exps=getExp(),incs=getInc();
+  var allInc=store.incomes.reduce(function(s,i){return s+i.amount},0);
+  var allExp=store.expenses.reduce(function(s,e){return s+e.amount},0);
+  var walletBal=store.walletInitialBalance+allInc-allExp;
+
+  var h='<div class="space-y-3"><h2 style="font-size:20px">🎒 TRAINER CARD</h2>';
+
+  /* Trainer info */
+  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center"><span style="font-size:20px">🧢</span></div><div><p style="font-size:16px">'+esc(u.username)+'</p><p style="font-size:8px" class="text-muted">'+esc(u.email)+'</p></div></div></div>';
+
+  /* Trainer stats */
+  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
+
+  /* ─── Wallet balance ─── */
+  h+='<div class="pb bg-card p-3">';
+  h+='<div class="flex justify-between items-center mb-2"><p style="font-size:9px" class="text-muted">💰 WALLET BALANCE</p>';
+  h+='<div class="flex gap-1">';
+  h+='<button onclick="setBalanceMode(\'initial\')" style="font-size:6px;background:'+(profileBalanceMode==='initial'?'var(--primary)':'none')+';color:'+(profileBalanceMode==='initial'?'var(--primary-fg)':'var(--secondary)')+';border:'+(profileBalanceMode==='initial'?'1px solid var(--primary)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET STARTING</button>';
+  h+='<button onclick="setBalanceMode(\'current\')" style="font-size:6px;background:'+(profileBalanceMode==='current'?'var(--accent)':'none')+';color:'+(profileBalanceMode==='current'?'#fff':'var(--accent)')+';border:'+(profileBalanceMode==='current'?'1px solid var(--accent)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET CURRENT</button>';
+  h+='</div></div>';
+  h+='<p style="font-size:20px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p>';
+  h+='<div class="space-y-1 mt-2" style="font-size:7px">';
+  h+='<div class="flex justify-between"><span class="text-muted">Starting Balance</span><span>'+idr(store.walletInitialBalance)+'</span></div>';
+  h+='<div class="flex justify-between"><span class="text-muted">+ All Income</span><span class="text-green">'+idr(allInc)+'</span></div>';
+  h+='<div class="flex justify-between"><span class="text-muted">− All Expenses</span><span class="text-red">'+idr(allExp)+'</span></div>';
+  h+='</div>';
+
+  if(profileBalanceMode==='initial'){
+    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your balance before tracking began:</p>';
+    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:8px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
+    h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px">SAVE</button></div>';
+    h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
+  }else if(profileBalanceMode==='current'){
+    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your actual current wallet balance:</p>';
+    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:8px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
+    h+='<button onclick="saveBalanceInput(\'current\')" class="btn" style="background:var(--accent);color:#fff;font-size:7px">SAVE</button></div>';
+    h+='<p style="font-size:6px" class="text-muted mt-1">Starting balance will be recalculated automatically.</p>';
+    h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
+  }
+  h+='</div>';
+
+  /* Actions */
+  h+='<div class="space-y-1"><button class="btn w-full" style="background:var(--secondary);color:var(--primary-fg);font-size:16px;padding:12px;text-align:left" onclick="nav(\'participants\')">👥 Manage Party Members</button>';
+  h+='<button class="btn w-full" style="background:var(--red);color:#fff;font-size:16px;padding:12px;text-align:left" onclick="doLogout()">🚪 Log Out (EXIT GAME)</button></div>';
+  h+='</div>';
+  return h;
+}
+
+window.setBalanceMode=function(mode){profileBalanceMode=mode;render()};
+window.saveBalanceInput=function(type){
+  var el=document.getElementById('bal-input');if(!el)return;
+  var val=parseK(el.value)||0;
+  if(type==='current'){
+    var allInc=store.incomes.reduce(function(s,i){return s+i.amount},0);
+    var allExp=store.expenses.reduce(function(s,e){return s+e.amount},0);
+    val=val-allInc+allExp; /* back-calculate initial balance */
+  }
+  saveInitialBalance(val);
+  profileBalanceMode=null;
+  showToast('✅ Balance saved!','success');
+};
+
+/* ══════════════════════════════════════════════════════
+   INIT — Supabase auth state listener
+   ══════════════════════════════════════════════════════ */
+async function init(){
+  if(!configOk){state.loading=false;render();return}
+
+  sb.auth.onAuthStateChange(function(event,session){
+    if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&session&&session.user){
+      if(!state.user||state.user.id!==session.user.id){
+        (async function(){await loadSession(session)})();
+      }
+    }else if(event==='SIGNED_OUT'){
+      state.user=null;state.loading=false;
+      store.participants=[];store.categories=[];store.expenses=[];store.incomes=[];store.bills=[];store.walletInitialBalance=0;
+      render();
+    }
+  });
+
+  var res=await sb.auth.getSession();
+  if(!res.data||!res.data.session){
+    state.loading=false;render();
+  }
+  /* If session exists, onAuthStateChange(INITIAL_SESSION) will fire and handle loading */
+}
+
+init();
+})();
+</script>
+</body>
+</html>
