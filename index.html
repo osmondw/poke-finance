@@ -258,16 +258,18 @@ window.toggleAuth=function(){authMode=authMode==='login'?'signup':'login';authEr
 
 window.doAuth=async function(e){
   e.preventDefault();
-  authLoading=true;authErr='';render();
-  var email=document.getElementById('a-email').value.trim();
+  /* Read form values BEFORE calling render(), otherwise the re-render
+     rebuilds the inputs and wipes the values the user typed. */
+  var email=(document.getElementById('a-email').value||'').trim();
   var pw=document.getElementById('a-pw').value;
+  var username=authMode==='signup'?((document.getElementById('a-user')||{}).value||'').trim():'';
+  authLoading=true;authErr='';render();
 
   if(authMode==='login'){
     var res=await sb.auth.signInWithPassword({email:email,password:pw});
     if(res.error){authErr=res.error.message;authLoading=false;render()}
     /* onAuthStateChange handles success */
   } else {
-    var username=(document.getElementById('a-user').value||'').trim();
     if(!username){authErr='Username required!';authLoading=false;render();return}
     /* Check username */
     var chk=await sb.from('profiles').select('id').eq('username',username);
