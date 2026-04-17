@@ -37,13 +37,13 @@ select{appearance:auto}
 .bottom-nav button.active{color:var(--primary)}
 .main-content{flex:1;overflow-y:auto;padding:12px;padding-bottom:90px}
 .tab-bar{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
-.tab-bar button{flex:1;padding:6px 4px;font-size:7px;border:2px solid var(--fg);background:var(--bg);color:var(--muted);cursor:pointer;min-width:48px}
+.tab-bar button{flex:1;padding:6px 4px;font-size:16px;border:2px solid var(--fg);background:var(--bg);color:var(--muted);cursor:pointer;min-width:48px}
 .tab-bar button.active{background:var(--primary);color:var(--primary-fg)}
 canvas{width:100%!important;image-rendering:auto}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--muted)}
 .warn-box{background:rgba(232,64,64,0.15);border:2px solid var(--red);padding:6px 10px;font-size:7px;color:var(--red);margin-bottom:6px}
 .info-box{background:rgba(56,183,100,0.12);border:2px solid var(--green);padding:6px 10px;font-size:7px;color:var(--green);margin-bottom:6px}
-.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:8px 18px;font-size:8px;border:2px solid #fff;z-index:500;max-width:90%;text-align:center;pointer-events:none}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);padding:8px 18px;font-size:12px;border:2px solid #fff;z-index:500;max-width:90%;text-align:center;pointer-events:none}
 .loader{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 .spinner{width:32px;height:32px;border:4px solid var(--card);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -321,7 +321,7 @@ function render(){
   if(billShowCreate)billSaveFormState();
 
   if(state.loading){
-    app.innerHTML='<div class="loader"><div class="spinner"></div><p style="font-size:8px" class="text-primary">Loading trainer data…</p></div>';
+    app.innerHTML='<div class="loader"><div class="spinner"></div><p style="font-size:14px" class="text-primary">Loading trainer data…</p></div>';
     return;
   }
   if(!configOk){renderSetup();return}
@@ -345,12 +345,12 @@ function render(){
   if(logoutWarn){
     html+='<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px">'
       +'<div class="pb bg-card p-4 text-center" style="max-width:320px;width:100%">'
-      +'<p style="font-size:20px;margin-bottom:8px">⚠️</p>'
+      +'<p style="font-size:20px;margin-bottom:12px">⚠️</p>'
       +'<p style="font-size:10px" class="text-primary mb-2">LOG OUT?</p>'
-      +'<p style="font-size:8px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
+      +'<p style="font-size:12px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
       +'<div class="flex gap-2 mt-2">'
-      +'<button onclick="doLogoutConfirm()" class="btn flex-1" style="background:var(--red);color:#fff;font-size:8px;border-color:var(--red)">YES, EXIT</button>'
-      +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--bg);font-size:8px">CANCEL</button>'
+      +'<button onclick="doLogoutConfirm()" class="btn flex-1" style="background:var(--red);color:#fff;font-size:12px;border-color:var(--red)">YES, EXIT</button>'
+      +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--bg);font-size:12px">CANCEL</button>'
       +'</div></div></div>';
   }
 
@@ -370,7 +370,7 @@ function renderSetup(){
   app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="max-width:480px;width:100%">'
     +'<div class="pb bg-card p-4 space-y-2">'
     +'<h1 style="font-size:14px" class="text-primary text-center">⚙️ SETUP REQUIRED</h1>'
-    +'<p style="font-size:8px" class="text-muted text-center">Open <strong>index.html</strong> and set these two variables at the top of the &lt;script&gt; tag:</p>'
+    +'<p style="font-size:12px" class="text-muted text-center">Open <strong>index.html</strong> and set these two variables at the top of the &lt;script&gt; tag:</p>'
     +'<div class="pb-sm bg-bg p-3" style="font-size:7px;font-family:monospace;color:var(--accent)">'
     +'var SUPABASE_URL = \'https://xxxxx.supabase.co\';<br>'
     +'var SUPABASE_ANON_KEY = \'eyJ...\';</div>'
@@ -386,16 +386,16 @@ function renderAuth(){
     return;
   }
   var isLogin=authMode==='login';
-  app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:100%;max-width:400px"><div class="text-center mb-2"><h1 style="font-size:18px" class="text-primary">⚡ PokéWallet ⚡</h1><p style="font-size:8px" class="text-muted">Gotta Track \'Em All!</p></div>'
+  app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:100%;max-width:400px"><div class="text-center mb-2"><h1 style="font-size:18px" class="text-primary">⚡ PokéWallet ⚡</h1><p style="font-size:14px" class="text-muted">Gotta Track \'Em All!</p></div>'
     +'<div class="pb bg-card p-4"><h2 style="font-size:11px" class="text-center mb-2">'+(isLogin?'► TRAINER LOGIN':'► NEW TRAINER')+'</h2>'
     +'<form onsubmit="doAuth(event)" class="space-y-2">'
     +(!isLogin?'<div class="form-group"><label>USERNAME</label><input id="a-user" class="pb-sm" placeholder="Ash Ketchum" autocomplete="username"/></div>':'')
     +'<div class="form-group"><label>EMAIL</label><input id="a-email" type="email" class="pb-sm" placeholder="ash@pokemon.com" required autocomplete="email"/></div>'
     +'<div class="form-group"><label>PASSWORD</label><input id="a-pw" type="password" class="pb-sm" placeholder="••••••••" required minlength="6" autocomplete="'+(isLogin?'current-password':'new-password')+'"/></div>'
-    +(authErr?'<p style="font-size:8px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
+    +(authErr?'<p style="font-size:12px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
     +'<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:10px;padding:10px"'+(authLoading?' disabled':'')+'>'+( authLoading?'…LOADING…':(isLogin?'▶ START ADVENTURE':'▶ CREATE TRAINER'))+'</button>'
     +'</form>'
-    +'<div class="text-center mt-2"><button onclick="toggleAuth()" style="font-size:8px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">'+(isLogin?'New trainer? Sign up!':'Already a trainer? Log in!')+'</button></div>'
+    +'<div class="text-center mt-2"><button onclick="toggleAuth()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">'+(isLogin?'New trainer? Sign up!':'Already a trainer? Log in!')+'</button></div>'
     +'</div><p class="text-center text-muted mt-1" style="font-size:6px">v3.0 — Cloud-powered by Supabase</p>'
     +'</div></div>';
 }
@@ -460,10 +460,10 @@ function renderDashboard(){
   h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
   if(exps.length===0)h+='<p style="font-size:12px" class="text-muted">No wild expenses appeared yet…</p>';
   else exps.slice(0,3).forEach(function(e){
-    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
       +'<div><span>'+esc(getCN(e.categoryId))+(e.note?' – '+esc(e.note):'')+'</span>'
-      +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(e.date)+'</p></div>'
-      +'<span class="text-red" style="white-space:nowrap;margin-left:6px">-'+idr(e.amount)+'</span></div>';
+      +'<p style="font-size:10px" class="text-muted mt-1">📅 '+fmtDate(e.date)+'</p></div>'
+      +'<span class="text-red" style="white-space:nowrap;margin-left:10px">-'+idr(e.amount)+'</span></div>';
   });
   h+='</div>';
 
@@ -546,8 +546,8 @@ function renderTracker(){
   function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'???'}
 
   var h='<div class="space-y-3">';
-  h+='<div class="flex items-center justify-between"><h2 style="font-size:20px">'+(tab==='expense'?'💸 EXPENSES':'💰 INCOME')+'</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:8px" onclick="trackerToggleForm()">'+(trackerShowForm?'✕ CANCEL':'+ ADD')+'</button></div>';
-  h+='<div class="tab-bar"><button class="'+(tab==='expense'?'active':'')+'" style="font-size:8px" onclick="setTrackerTab(\'expense\')">💸 EXPENSES</button><button class="'+(tab==='income'?'active':'')+'" style="font-size:8px" onclick="setTrackerTab(\'income\')">💰 INCOME</button></div>';
+  h+='<div class="flex items-center justify-between"><h2 style="font-size:20px">'+(tab==='expense'?'💸 EXPENSES':'💰 INCOME')+'</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:12px" onclick="trackerToggleForm()">'+(trackerShowForm?'✕ CANCEL':'+ ADD')+'</button></div>';
+  h+='<div class="tab-bar"><button class="'+(tab==='expense'?'active':'')+'" style="font-size:16px" onclick="setTrackerTab(\'expense\')">💸 EXPENSES</button><button class="'+(tab==='income'?'active':'')+'" style="font-size:12px" onclick="setTrackerTab(\'income\')">💰 INCOME</button></div>';
 
   if(trackerShowForm){
     h+='<form onsubmit="trackerAdd(event)" class="pb bg-card p-3 space-y-2">';
@@ -558,7 +558,7 @@ function renderTracker(){
     h+='<div class="form-group"><label>DATE</label><input id="t-date" type="date" class="pb-sm" value="'+new Date().toISOString().slice(0,10)+'"/></div>';
     h+='<div class="form-group"><label>NOTE (optional)</label><input id="t-note" class="pb-sm" placeholder="'+(tab==='expense'?'Battle at PokéMart…':'Won the Pokémon League…')+'"/></div>';
     h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:10px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
-    h+='<button type="submit" class="btn w-full" style="background:var(--green);color:#fff;font-size:8px;padding:8px">▶ '+(tab==='expense'?'CATCH EXPENSE':'COLLECT POKÉCOINS')+'</button>';
+    h+='<button type="submit" class="btn w-full" style="background:var(--green);color:#fff;font-size:12px;padding:8px">▶ '+(tab==='expense'?'CATCH EXPENSE':'COLLECT POKÉCOINS')+'</button>';
     h+='</form>';
   }
 
@@ -581,8 +581,8 @@ function renderTracker(){
         +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:9px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:7px" class="text-accent">🔄</span>':'')+'</div>'
         +'<p style="font-size:6px" class="text-muted">'+fmtDate(it.date)+(it.note?' · '+esc(it.note):'')+'</p></div>'
         +'<div class="flex items-center gap-1"><span style="font-size:9px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
-        +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
-        +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
+        +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
+        +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
     }
   });
   h+='</div></div>';
@@ -632,12 +632,12 @@ function renderSplitBill(){
   var parts=getParts(),bills=getBills();
   function getPN(id){var p=parts.find(function(x){return x.id===id});return p?p.name:'???'}
 
-  var h='<div class="space-y-3"><div class="flex items-center justify-between"><h2 style="font-size:20px">📋 SPLIT BILL</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:8px" onclick="billToggle()">'+(billShowCreate?'✕ CANCEL':'+ NEW BILL')+'</button></div>';
+  var h='<div class="space-y-3"><div class="flex items-center justify-between"><h2 style="font-size:20px">📋 SPLIT BILL</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:12px" onclick="billToggle()">'+(billShowCreate?'✕ CANCEL':'+ NEW BILL')+'</button></div>';
 
   if(billView){
     h+='<div class="pb bg-card p-3 space-y-2"><div class="flex justify-between items-center"><h3 style="font-size:10px" class="text-primary">'+esc(billView.title)+'</h3><div class="flex gap-1"><button onclick="billEditExisting(\''+billView.id+'\')" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️ EDIT</button><button onclick="billCloseView()" style="font-size:7px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit">✕</button></div></div>';
-    h+='<div style="font-size:8px" class="space-y-1"><p>Total: <span class="text-accent">'+idr(billView.totalAmount)+'</span></p>'+(billView.tax?'<p>Tax: '+idr(billView.tax)+'</p>':'')+'<p>Method: '+billView.splitMethod+'</p></div>';
-    h+='<div class="mt-1"><p style="font-size:7px" class="text-muted mb-1">SPLIT SUMMARY:</p>'+billView.splits.map(function(s){return'<div class="flex justify-between pb-sm p-1 mb-1 bg-bg" style="font-size:8px"><span>'+esc(getPN(s.participantId))+'</span><span class="text-red">'+idr(s.amount)+'</span></div>'}).join('')+'</div></div>';
+    h+='<div style="font-size:12px" class="space-y-1"><p>Total: <span class="text-accent">'+idr(billView.totalAmount)+'</span></p>'+(billView.tax?'<p>Tax: '+idr(billView.tax)+'</p>':'')+'<p>Method: '+billView.splitMethod+'</p></div>';
+    h+='<div class="mt-1"><p style="font-size:7px" class="text-muted mb-1">SPLIT SUMMARY:</p>'+billView.splits.map(function(s){return'<div class="flex justify-between pb-sm p-1 mb-1 bg-bg" style="font-size:12px"><span>'+esc(getPN(s.participantId))+'</span><span class="text-red">'+idr(s.amount)+'</span></div>'}).join('')+'</div></div>';
   }
 
   if(billShowCreate){
@@ -656,7 +656,7 @@ function renderSplitBill(){
     if(billMethod==='item-based'){
       h+='<div class="form-group"><div class="flex justify-between items-center"><label>ITEMS</label><button onclick="billAddItem()" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">+ Add Item</button></div>';
       billItems.forEach(function(item,idx){
-        h+='<div class="pb-sm bg-bg p-2 mt-1 space-y-1"><div class="flex gap-1"><input value="'+esc(item.name)+'" onchange="billUpdItem('+idx+',\'name\',this.value)" class="pb-sm" style="flex:1;font-size:8px" placeholder="Item name"/><input type="text" inputmode="numeric" value="'+fmtDisp(item.price)+'" oninput="numfmt(this);billUpdItem('+idx+',\'price\',parseK(this.value))" class="pb-sm" style="width:80px;font-size:8px" placeholder="Price"/><input type="number" value="'+item.quantity+'" onchange="billUpdItem('+idx+',\'quantity\',this.value)" class="pb-sm" style="width:40px;font-size:8px" min="1"/><button onclick="billRemItem('+idx+')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div>';
+        h+='<div class="pb-sm bg-bg p-2 mt-1 space-y-1"><div class="flex gap-1"><input value="'+esc(item.name)+'" onchange="billUpdItem('+idx+',\'name\',this.value)" class="pb-sm" style="flex:1;font-size:12px" placeholder="Item name"/><input type="text" inputmode="numeric" value="'+fmtDisp(item.price)+'" oninput="numfmt(this);billUpdItem('+idx+',\'price\',parseK(this.value))" class="pb-sm" style="width:80px;font-size:12px" placeholder="Price"/><input type="number" value="'+item.quantity+'" onchange="billUpdItem('+idx+',\'quantity\',this.value)" class="pb-sm" style="width:40px;font-size:12px" min="1"/><button onclick="billRemItem('+idx+')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div>';
         h+='<div class="flex flex-wrap gap-1">'+billSelParts.map(function(pid){var a=item.assignments.find(function(x){return x.participantId===pid});var q=a?a.quantity:0;return'<div class="flex items-center gap-1"><span style="font-size:6px" class="text-muted">'+esc(getPN(pid))+':</span><input type="number" value="'+(q||'')+'" min="0" onchange="billAssignItem('+idx+',\''+pid+'\',this.value)" class="pb-sm" style="width:30px;font-size:7px;text-align:center;padding:2px"/></div>'}).join('')+'</div>';
         h+='</div>';
       });
@@ -670,9 +670,9 @@ function renderSplitBill(){
         var field=billMethod==='percentage'?'percentage':'amount';
         var curVal=cur?cur[field]||'':'';
         if(billMethod==='exact'){
-          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="text" inputmode="numeric" value="'+fmtDisp(curVal)+'" oninput="numfmt(this)" onchange="billUpdSplitAmt(\''+pid+'\',this)" class="pb-sm" style="width:100px;font-size:8px;text-align:right" placeholder="Rp"/></div>';
+          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="text" inputmode="numeric" value="'+fmtDisp(curVal)+'" oninput="numfmt(this)" onchange="billUpdSplitAmt(\''+pid+'\',this)" class="pb-sm" style="width:100px;font-size:12px;text-align:right" placeholder="Rp"/></div>';
         }else{
-          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="number" value="'+curVal+'" onchange="billUpdSplit(\''+pid+'\',\'percentage\',this.value)" class="pb-sm" style="width:80px;font-size:8px;text-align:right" placeholder="%"/></div>';
+          h+='<div class="flex items-center gap-2 mt-1"><span style="font-size:7px;flex:1">'+esc(getPN(pid))+'</span><input type="number" value="'+curVal+'" onchange="billUpdSplit(\''+pid+'\',\'percentage\',this.value)" class="pb-sm" style="width:80px;font-size:12px;text-align:right" placeholder="%"/></div>';
         }
       });
       h+='</div>';
@@ -683,14 +683,14 @@ function renderSplitBill(){
       h+='<div class="pb-sm bg-bg p-2"><p style="font-size:7px" class="text-muted">Equal split: each pays <span class="text-accent">'+idr(each)+'</span></p></div>';
     }
 
-    h+='<button onclick="billCreate()" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:9px;padding:8px">▶ '+(billEditId?'UPDATE BILL':'CREATE BILL')+'</button>';
+    h+='<button onclick="billCreate()" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:9px;padding:12px">▶ '+(billEditId?'UPDATE BILL':'CREATE BILL')+'</button>';
     h+='</div>';
   }
 
-  h+='<div class="space-y-1"><p style="font-size:8px" class="text-muted">BILL HISTORY</p>';
-  if(bills.length===0)h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">No bills yet! Create one above.</p></div>';
+  h+='<div class="space-y-1"><p style="font-size:16Px" class="text-muted">BILL HISTORY</p>';
+  if(bills.length===0)h+='<div class="poke-dialog"><p style="font-size:14px" class="text-muted">No bills yet! Create one above.</p></div>';
   else bills.forEach(function(b){
-    h+='<div class="pb-sm bg-card p-2 flex items-center justify-between" style="cursor:pointer" onclick="billViewBill(\''+b.id+'\')"><div><span style="font-size:8px" class="text-primary">'+esc(b.title)+'</span><p style="font-size:6px" class="text-muted">'+b.splitMethod+' · '+b.participants.length+' trainers</p></div><div class="flex items-center gap-1"><span style="font-size:9px" class="text-accent">'+idr(b.totalAmount)+'</span><button onclick="event.stopPropagation();billEditExisting(\''+b.id+'\')" style="font-size:8px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button><button onclick="event.stopPropagation();billDel(\''+b.id+'\')" style="font-size:8px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
+    h+='<div class="pb-sm bg-card p-2 flex items-center justify-between" style="cursor:pointer" onclick="billViewBill(\''+b.id+'\')"><div><span style="font-size:14px" class="text-primary">'+esc(b.title)+'</span><p style="font-size:6px" class="text-muted">'+b.splitMethod+' · '+b.participants.length+' trainers</p></div><div class="flex items-center gap-1"><span style="font-size:9px" class="text-accent">'+idr(b.totalAmount)+'</span><button onclick="event.stopPropagation();billEditExisting(\''+b.id+'\')" style="font-size:14px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button><button onclick="event.stopPropagation();billDel(\''+b.id+'\')" style="font-size:14px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
   });
   h+='</div></div>';
   return h;
@@ -769,7 +769,7 @@ function renderParticipants(){
   h+='<form onsubmit="partAdd(event)" class="pb bg-card p-3 space-y-2"><p style="font-size:14px" class="text-muted">Add a new trainer to your party!</p>';
   if(partNameErr)h+='<div class="warn-box">⚠️ '+esc(partNameErr)+'</div>';
   h+='<div class="flex gap-1"><input id="p-name" class="pb-sm" style="flex:1" placeholder="Name" required/><input id="p-contact" class="pb-sm" style="flex:1" placeholder="Contact (optional)"/></div>';
-  h+='<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:12px;padding:8px">▶ ADD TO PARTY</button></form>';
+  h+='<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:12px;padding:12px">▶ ADD TO PARTY</button></form>';
   h+='<div class="space-y-1">';
   if(parts.length===0)h+='<div class="poke-dialog"><p style="font-size:14px" class="text-muted">Your party is empty! Add trainers above.</p></div>';
   else parts.forEach(function(p){
@@ -839,12 +839,12 @@ function renderProfile(){
 
   if(profileBalanceMode==='initial'){
     h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your balance before tracking began:</p>';
-    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:8px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
-    h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px">SAVE</button></div>';
+    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
+    h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:10px">SAVE</button></div>';
     h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
   }else if(profileBalanceMode==='current'){
     h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your actual current wallet balance:</p>';
-    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:8px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
+    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
     h+='<button onclick="saveBalanceInput(\'current\')" class="btn" style="background:var(--accent);color:#fff;font-size:7px">SAVE</button></div>';
     h+='<p style="font-size:6px" class="text-muted mt-1">Starting balance will be recalculated automatically.</p>';
     h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
