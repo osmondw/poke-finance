@@ -422,10 +422,10 @@ function renderDashboard(){
 
   /* Stats cards */
   h+='<div class="grid grid-3 gap-2">';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:14px" class="text-muted mb-1">INCOME</p><p style="font-size:9px" class="text-green">'+idr(tInc)+'</p></div>';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:14px" class="text-muted mb-1">EXPENSE</p><p style="font-size:9px" class="text-red">'+idr(tExp)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1">INCOME</p><p style="font-size:14px" class="text-green">'+idr(tInc)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1">EXPENSE</p><p style="font-size:14px" class="text-red">'+idr(tExp)+'</p></div>';
   h+='<div class="pb bg-card p-3 text-center" onclick="nav(\'profile\')" style="cursor:pointer" title="Tap to edit balance">';
-  h+='<p style="font-size:14px" class="text-muted mb-1">BALANCE</p><p style="font-size:9px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
+  h+='<p style="font-size:16px" class="text-muted mb-1">BALANCE</p><p style="font-size:14px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
   h+='</div>';
 
   /* Chart */
@@ -766,12 +766,12 @@ window.billCreate=function(){
 function renderParticipants(){
   var parts=getParts();
   var h='<div class="space-y-3"><h2 style="font-size:11px">👥 PARTY MEMBERS</h2>';
-  h+='<form onsubmit="partAdd(event)" class="pb bg-card p-3 space-y-2"><p style="font-size:8px" class="text-muted">Add a new trainer to your party!</p>';
+  h+='<form onsubmit="partAdd(event)" class="pb bg-card p-3 space-y-2"><p style="font-size:14px" class="text-muted">Add a new trainer to your party!</p>';
   if(partNameErr)h+='<div class="warn-box">⚠️ '+esc(partNameErr)+'</div>';
   h+='<div class="flex gap-1"><input id="p-name" class="pb-sm" style="flex:1" placeholder="Name" required/><input id="p-contact" class="pb-sm" style="flex:1" placeholder="Contact (optional)"/></div>';
-  h+='<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:8px;padding:8px">▶ ADD TO PARTY</button></form>';
+  h+='<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:12px;padding:8px">▶ ADD TO PARTY</button></form>';
   h+='<div class="space-y-1">';
-  if(parts.length===0)h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">Your party is empty! Add trainers above.</p></div>';
+  if(parts.length===0)h+='<div class="poke-dialog"><p style="font-size:14px" class="text-muted">Your party is empty! Add trainers above.</p></div>';
   else parts.forEach(function(p){
     if(partEditId===p.id){
       h+='<div class="pb-sm bg-card p-2 space-y-1">';
