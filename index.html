@@ -439,16 +439,16 @@ function renderDashboard(){
 
   if(state.chartPeriod==='custom'){
     h+='<div class="flex gap-1 mt-1 items-end">';
-    h+='<div style="flex:1"><label style="font-size:6px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="chart-from" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomFrom)+'"/></div>';
-    h+='<div style="flex:1"><label style="font-size:6px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="chart-to" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomTo)+'"/></div>';
-    h+='<button onclick="applyCustomRange()" class="btn" style="font-size:7px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
-    h+='</div><p style="font-size:6px" class="text-muted mt-1">⚡ Max 30 days</p>';
+    h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="chart-from" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomFrom)+'"/></div>';
+    h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="chart-to" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomTo)+'"/></div>';
+    h+='<button onclick="applyCustomRange()" class="btn" style="font-size:12px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
+    h+='</div><p style="font-size:12px" class="text-muted mt-1">⚡ Max 30 days</p>';
   }
 
   if(state.chartPeriod!=='custom'||(state.chartCustomFrom&&state.chartCustomTo)){
     h+='<canvas id="chart-main" height="160"></canvas>';
   }
-  h+='<div class="flex justify-end mt-1" style="font-size:6px"><span class="text-red">■ Expense</span></div></div>';
+  h+='<div class="flex justify-end mt-1" style="font-size:12px"><span class="text-red">■ Expense</span></div></div>';
 
   /* Battle stats */
   h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
@@ -503,7 +503,7 @@ function drawCharts(){
   var labels=[],expData=[];
 
   if(period==='week'){
-    for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(['Su','Mo','Tu','We','Th','Fr','Sa'][d.getDay()]);expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
+    for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(['Sun','Mon','Tue','Wed','Thr','Fri','Sat'][d.getDay()]);expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='month'){
     for(var i=29;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(d.getDate().toString());expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='3month'){
@@ -557,7 +557,7 @@ function renderTracker(){
     if(trackerShowNewCat){h+='<div class="flex gap-1"><input id="t-newcat" class="pb-sm" placeholder="New category" style="flex:1"/><button type="button" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:7px" onclick="trackerAddCat()">ADD</button></div>'}
     h+='<div class="form-group"><label>DATE</label><input id="t-date" type="date" class="pb-sm" value="'+new Date().toISOString().slice(0,10)+'"/></div>';
     h+='<div class="form-group"><label>NOTE (optional)</label><input id="t-note" class="pb-sm" placeholder="'+(tab==='expense'?'Battle at PokéMart…':'Won the Pokémon League…')+'"/></div>';
-    h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:8px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
+    h+='<div class="flex items-center gap-2"><input type="checkbox" id="t-rec" style="width:auto"><label for="t-rec" style="font-size:14px;color:var(--fg)">Recurring?</label><select id="t-freq" class="pb-sm" style="width:auto;padding:3px"><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="yearly">Yearly</option></select></div>';
     h+='<button type="submit" class="btn w-full" style="background:var(--green);color:#fff;font-size:8px;padding:8px">▶ '+(tab==='expense'?'CATCH EXPENSE':'COLLECT POKÉCOINS')+'</button>';
     h+='</form>';
   }
