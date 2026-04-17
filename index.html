@@ -347,7 +347,7 @@ function render(){
       +'<div class="pb bg-card p-4 text-center" style="max-width:320px;width:100%">'
       +'<p style="font-size:20px;margin-bottom:12px">⚠️</p>'
       +'<p style="font-size:10px" class="text-primary mb-2">LOG OUT?</p>'
-      +'<p style="font-size:12px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
+      +'<p style="font-size:16px" class="text-muted mb-2">Sure you want to exit? Data is safely stored in the cloud.</p>'
       +'<div class="flex gap-2 mt-2">'
       +'<button onclick="doLogoutConfirm()" class="btn flex-1" style="background:var(--red);color:#fff;font-size:12px;border-color:var(--red)">YES, EXIT</button>'
       +'<button onclick="logoutCancel()" class="btn flex-1" style="background:var(--green);font-size:12px">CANCEL</button>'
@@ -546,8 +546,8 @@ function renderTracker(){
   function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'???'}
 
   var h='<div class="space-y-3">';
-  h+='<div class="flex items-center justify-between"><h2 style="font-size:20px">'+(tab==='expense'?'💸 EXPENSES':'💰 INCOME')+'</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:12px" onclick="trackerToggleForm()">'+(trackerShowForm?'✕ CANCEL':'+ ADD')+'</button></div>';
-  h+='<div class="tab-bar"><button class="'+(tab==='expense'?'active':'')+'" style="font-size:16px" onclick="setTrackerTab(\'expense\')">💸 EXPENSES</button><button class="'+(tab==='income'?'active':'')+'" style="font-size:12px" onclick="setTrackerTab(\'income\')">💰 INCOME</button></div>';
+  h+='<div class="flex items-center justify-between"><h2 style="font-size:20px">'+(tab==='expense'?'💸 EXPENSES':'💰 INCOME')+'</h2><button class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:16px" onclick="trackerToggleForm()">'+(trackerShowForm?'✕ CANCEL':'+ ADD')+'</button></div>';
+  h+='<div class="tab-bar"><button class="'+(tab==='expense'?'active':'')+'" style="font-size:16px" onclick="setTrackerTab(\'expense\')">💸 EXPENSES</button><button class="'+(tab==='income'?'active':'')+'" style="font-size:16px" onclick="setTrackerTab(\'income\')">💰 INCOME</button></div>';
 
   if(trackerShowForm){
     h+='<form onsubmit="trackerAdd(event)" class="pb bg-card p-3 space-y-2">';
@@ -645,16 +645,16 @@ function renderSplitBill(){
     if(billEditId)h+='<div class="info-box">✏️ EDITING EXISTING BILL</div>';
     h+='<div class="form-group"><label>BILL TITLE</label><input id="b-title" class="pb-sm" placeholder="Dinner at PokéCenter" value="'+esc(billFormTitle)+'"/></div>';
     h+='<div class="grid grid-3 gap-1">'
-      +'<div class="form-group"><label style="font-size:6px">TOTAL (after tax)</label><input id="b-total" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTotal)+'" data-raw="'+esc(billFormTotal)+'"/></div>'
-      +'<div class="form-group"><label style="font-size:6px">BEFORE TAX (opt)</label><input id="b-before" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormBefore)+'" data-raw="'+esc(billFormBefore)+'"/></div>'
-      +'<div class="form-group"><label style="font-size:6px">TAX (opt)</label><input id="b-tax" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTax)+'" data-raw="'+esc(billFormTax)+'"/></div>'
+      +'<div class="form-group"><label style="font-size:14px">TOTAL (after tax)</label><input id="b-total" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTotal)+'" data-raw="'+esc(billFormTotal)+'"/></div>'
+      +'<div class="form-group"><label style="font-size:14px">BEFORE TAX (opt)</label><input id="b-before" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormBefore)+'" data-raw="'+esc(billFormBefore)+'"/></div>'
+      +'<div class="form-group"><label style="font-size:14px">TAX (opt)</label><input id="b-tax" type="text" inputmode="numeric" class="pb-sm" oninput="numfmt(this)" value="'+fmtDisp(billFormTax)+'" data-raw="'+esc(billFormTax)+'"/></div>'
       +'</div>';
     h+='<div class="form-group"><label>SPLIT METHOD</label><div class="grid grid-4 gap-1 mt-1">'+['equal','percentage','exact','item-based'].map(function(m){return'<button onclick="billSetMethod(\''+m+'\')" class="pb-sm" style="font-size:9px;padding:4px;cursor:pointer;background:'+(billMethod===m?'var(--primary)':'var(--bg)')+';color:'+(billMethod===m?'var(--primary-fg)':'var(--fg)')+'">'+m.toUpperCase()+'</button>'}).join('')+'</div></div>';
     h+='<div class="form-group"><label>PARTICIPANTS</label><div class="flex flex-wrap gap-1 mt-1">'+parts.map(function(p){return'<button onclick="billTogglePart(\''+p.id+'\')" class="pb-sm" style="font-size:7px;padding:3px 6px;cursor:pointer;background:'+(billSelParts.indexOf(p.id)>=0?'var(--primary)':'var(--bg)')+';color:'+(billSelParts.indexOf(p.id)>=0?'var(--primary-fg)':'var(--fg)')+'">'+esc(p.name)+'</button>'}).join('')+'</div>';
     h+='<div class="flex gap-1 mt-1"><input id="b-qname" class="pb-sm" style="flex:1" placeholder="Quick add trainer…"/><button class="btn" style="background:var(--accent);color:#fff;font-size:7px" onclick="billQuickAdd()">+</button></div></div>';
 
     if(billMethod==='item-based'){
-      h+='<div class="form-group"><div class="flex justify-between items-center"><label>ITEMS</label><button onclick="billAddItem()" style="font-size:7px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">+ Add Item</button></div>';
+      h+='<div class="form-group"><div class="flex justify-between items-center"><label>ITEMS</label><button onclick="billAddItem()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">+ Add Item</button></div>';
       billItems.forEach(function(item,idx){
         h+='<div class="pb-sm bg-bg p-2 mt-1 space-y-1"><div class="flex gap-1"><input value="'+esc(item.name)+'" onchange="billUpdItem('+idx+',\'name\',this.value)" class="pb-sm" style="flex:1;font-size:12px" placeholder="Item name"/><input type="text" inputmode="numeric" value="'+fmtDisp(item.price)+'" oninput="numfmt(this);billUpdItem('+idx+',\'price\',parseK(this.value))" class="pb-sm" style="width:80px;font-size:12px" placeholder="Price"/><input type="number" value="'+item.quantity+'" onchange="billUpdItem('+idx+',\'quantity\',this.value)" class="pb-sm" style="width:40px;font-size:12px" min="1"/><button onclick="billRemItem('+idx+')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div>';
         h+='<div class="flex flex-wrap gap-1">'+billSelParts.map(function(pid){var a=item.assignments.find(function(x){return x.participantId===pid});var q=a?a.quantity:0;return'<div class="flex items-center gap-1"><span style="font-size:6px" class="text-muted">'+esc(getPN(pid))+':</span><input type="number" value="'+(q||'')+'" min="0" onchange="billAssignItem('+idx+',\''+pid+'\',this.value)" class="pb-sm" style="width:30px;font-size:7px;text-align:center;padding:2px"/></div>'}).join('')+'</div>';
