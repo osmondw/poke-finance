@@ -422,10 +422,10 @@ function renderDashboard(){
 
   /* Stats cards */
   h+='<div class="grid grid-3 gap-2">';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:6px" class="text-muted mb-1">MO. INCOME</p><p style="font-size:9px" class="text-green">'+idr(tInc)+'</p></div>';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:6px" class="text-muted mb-1">MO. EXPENSE</p><p style="font-size:9px" class="text-red">'+idr(tExp)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:14px" class="text-muted mb-1">INCOME</p><p style="font-size:9px" class="text-green">'+idr(tInc)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:14px" class="text-muted mb-1">EXPENSE</p><p style="font-size:9px" class="text-red">'+idr(tExp)+'</p></div>';
   h+='<div class="pb bg-card p-3 text-center" onclick="nav(\'profile\')" style="cursor:pointer" title="Tap to edit balance">';
-  h+='<p style="font-size:6px" class="text-muted mb-1">WALLET ⚙</p><p style="font-size:9px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
+  h+='<p style="font-size:14px" class="text-muted mb-1">BALANCE</p><p style="font-size:9px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
   h+='</div>';
 
   /* Chart */
