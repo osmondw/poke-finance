@@ -430,7 +430,7 @@ function renderDashboard(){
 
   /* Chart */
   var today=new Date().toISOString().slice(0,10);
-  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">📊 EXPENSE CHART</p>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">📊 EXPENSE CHART</p>';
   h+='<div class="tab-bar">';
   [{k:'week',l:'WEEK'},{k:'month',l:'MONTH'},{k:'3month',l:'3MO'},{k:'year',l:'YEAR'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
     h+='<button class="'+(state.chartPeriod===p.k?'active':'')+'" onclick="setChart(\''+p.k+'\')">'+p.l+'</button>';
@@ -451,14 +451,14 @@ function renderDashboard(){
   h+='<div class="flex justify-end mt-1" style="font-size:6px"><span class="text-red">■ Expense</span></div></div>';
 
   /* Battle stats */
-  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
-  h+='<div class="flex justify-between" style="font-size:8px"><span>Bills Split</span><span class="text-accent">'+bills.length+'</span></div>';
-  h+='<div class="flex justify-between" style="font-size:8px"><span>This Month Transactions</span><span class="text-accent">'+(mExp.length+mInc.length)+'</span></div>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
+  h+='<div class="flex justify-between" style="font-size:12px"><span>Bills Split</span><span class="text-accent">'+bills.length+'</span></div>';
+  h+='<div class="flex justify-between" style="font-size:12px"><span>This Month Transactions</span><span class="text-accent">'+(mExp.length+mInc.length)+'</span></div>';
   h+='</div></div>';
 
   /* Recent expenses */
-  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
-  if(exps.length===0)h+='<p style="font-size:7px" class="text-muted">No wild expenses appeared yet…</p>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
+  if(exps.length===0)h+='<p style="font-size:12px" class="text-muted">No wild expenses appeared yet…</p>';
   else exps.slice(0,3).forEach(function(e){
     h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
       +'<div><span>'+esc(getCN(e.categoryId))+(e.note?' – '+esc(e.note):'')+'</span>'
@@ -468,8 +468,8 @@ function renderDashboard(){
   h+='</div>';
 
   /* Recent income */
-  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">✨ RECENT INCOME</p>';
-  if(incs.length===0)h+='<p style="font-size:7px" class="text-muted">No PokéCoins earned yet…</p>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">✨ RECENT INCOME</p>';
+  if(incs.length===0)h+='<p style="font-size:12px" class="text-muted">No PokéCoins earned yet…</p>';
   else incs.slice(0,3).forEach(function(i){
     h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
       +'<div><span>'+esc(i.source)+(i.note?' – '+esc(i.note):'')+'</span>'
@@ -563,7 +563,7 @@ function renderTracker(){
   }
 
   h+='<div class="space-y-1">';
-  if(items.length===0){h+='<div class="poke-dialog"><p style="font-size:8px" class="text-muted">'+(tab==='expense'?'No wild expenses appeared!':'No PokéCoins earned yet!')+'</p></div>'}
+  if(items.length===0){h+='<div class="poke-dialog"><p style="font-size:16px" class="text-muted">'+(tab==='expense'?'No wild expenses appeared!':'No PokéCoins earned yet!')+'</p></div>'}
   else items.forEach(function(it){
     if(trackerEditId===it.id){
       h+='<div class="pb-sm bg-card p-2 space-y-1">';
@@ -827,11 +827,11 @@ function renderProfile(){
   h+='<div class="pb bg-card p-3">';
   h+='<div class="flex justify-between items-center mb-2"><p style="font-size:9px" class="text-muted">💰 WALLET BALANCE</p>';
   h+='<div class="flex gap-1">';
-  h+='<button onclick="setBalanceMode(\'initial\')" style="font-size:6px;background:'+(profileBalanceMode==='initial'?'var(--primary)':'none')+';color:'+(profileBalanceMode==='initial'?'var(--primary-fg)':'var(--secondary)')+';border:'+(profileBalanceMode==='initial'?'1px solid var(--primary)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET STARTING</button>';
-  h+='<button onclick="setBalanceMode(\'current\')" style="font-size:6px;background:'+(profileBalanceMode==='current'?'var(--accent)':'none')+';color:'+(profileBalanceMode==='current'?'#fff':'var(--accent)')+';border:'+(profileBalanceMode==='current'?'1px solid var(--accent)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET CURRENT</button>';
+  h+='<button onclick="setBalanceMode(\'initial\')" style="font-size:12px;background:'+(profileBalanceMode==='initial'?'var(--primary)':'none')+';color:'+(profileBalanceMode==='initial'?'var(--primary-fg)':'var(--secondary)')+';border:'+(profileBalanceMode==='initial'?'1px solid var(--primary)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET STARTING</button>';
+  h+='<button onclick="setBalanceMode(\'current\')" style="font-size:12px;background:'+(profileBalanceMode==='current'?'var(--accent)':'none')+';color:'+(profileBalanceMode==='current'?'#fff':'var(--accent)')+';border:'+(profileBalanceMode==='current'?'1px solid var(--accent)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET CURRENT</button>';
   h+='</div></div>';
   h+='<p style="font-size:20px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p>';
-  h+='<div class="space-y-1 mt-2" style="font-size:7px">';
+  h+='<div class="space-y-1 mt-2" style="font-size:12px">';
   h+='<div class="flex justify-between"><span class="text-muted">Starting Balance</span><span>'+idr(store.walletInitialBalance)+'</span></div>';
   h+='<div class="flex justify-between"><span class="text-muted">+ All Income</span><span class="text-green">'+idr(allInc)+'</span></div>';
   h+='<div class="flex justify-between"><span class="text-muted">− All Expenses</span><span class="text-red">'+idr(allExp)+'</span></div>';
