@@ -471,7 +471,7 @@ function renderDashboard(){
   h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">✨ RECENT INCOME</p>';
   if(incs.length===0)h+='<p style="font-size:12px" class="text-muted">No PokéCoins earned yet…</p>';
   else incs.slice(0,3).forEach(function(i){
-    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:7px">'
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
       +'<div><span>'+esc(i.source)+(i.note?' – '+esc(i.note):'')+'</span>'
       +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(i.date)+'</p></div>'
       +'<span class="text-green" style="white-space:nowrap;margin-left:6px">+'+idr(i.amount)+'</span></div>';
