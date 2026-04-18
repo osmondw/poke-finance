@@ -347,7 +347,7 @@ function render(){
     case'summary':   html+=renderSummary();break;
   }
   html+='</div>';
-  var navs=[{k:'dashboard',i:'🏠',l:'HOME'},{k:'tracker',i:'💰',l:'TRACK'},{k:'summary',i:'📊',l:'STATS'},{k:'split-bill',i:'📋',l:'SPLIT'},{k:'profile',i:'🎒',l:'BAG'}];
+  var navs=[{k:'dashboard',i:'🏠',l:'HOME'},{k:'tracker',i:'🧭',l:'TRACK'},{k:'summary',i:'📈',l:'SUMMARY'},{k:'split-bill',i:'📋',l:'SPLIT'},{k:'profile',i:'🎒',l:'BAG'}];
   html+='<div class="bottom-nav">'+navs.map(function(n){return'<button class="'+(state.page===n.k?'active':'')+'" onclick="nav(\''+n.k+'\')">'+n.i+'<span class="lbl">'+n.l+'</span></button>'}).join('')+'</div>';
 
   /* Logout overlay */
