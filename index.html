@@ -97,6 +97,11 @@ var profileBalanceMode=null; /* null | 'initial' | 'current' */
 var profileEditUsername=false,profileUsernameErr='',profileUsernameSaving=false;
 var trackerOpen={}; /* keys: 'y-2025', 'm-2025-03', 'd-2025-03-14' */
 var chartHover=null; /* {x,y,label,value} */
+/* Summary page state */
+var sumType='expense'; /* 'expense' | 'income' */
+var sumPeriod='month'; /* 'month' | '3month' | 'year' | 'all' | 'custom' */
+var sumCustomFrom='', sumCustomTo='';
+var sumHover=null;
 
 /* ── Toast ───────────────────────────────────────────── */
 var _toastTimer=null;
@@ -339,9 +344,10 @@ function render(){
     case'split-bill':html+=renderSplitBill();break;
     case'participants':html+=renderParticipants();break;
     case'profile':   html+=renderProfile();break;
+    case'summary':   html+=renderSummary();break;
   }
   html+='</div>';
-  var navs=[{k:'dashboard',i:'🏠',l:'HOME'},{k:'tracker',i:'💰',l:'TRACK'},{k:'split-bill',i:'📋',l:'SPLIT'},{k:'participants',i:'👥',l:'PARTY'},{k:'profile',i:'🎒',l:'BAG'}];
+  var navs=[{k:'dashboard',i:'🏠',l:'HOME'},{k:'tracker',i:'💰',l:'TRACK'},{k:'summary',i:'📊',l:'STATS'},{k:'split-bill',i:'📋',l:'SPLIT'},{k:'profile',i:'🎒',l:'BAG'}];
   html+='<div class="bottom-nav">'+navs.map(function(n){return'<button class="'+(state.page===n.k?'active':'')+'" onclick="nav(\''+n.k+'\')">'+n.i+'<span class="lbl">'+n.l+'</span></button>'}).join('')+'</div>';
 
   /* Logout overlay */
@@ -366,6 +372,7 @@ function render(){
   html+='</div>';
   app.innerHTML=html;
   if(state.page==='dashboard')drawCharts();
+  if(state.page==='summary')drawSumChart();
 }
 
 /* ── Setup instructions ─────────────────────────────── */
@@ -993,9 +1000,19 @@ window.saveUsername=async function(){
   if(chk.error){profileUsernameSaving=false;profileUsernameErr=chk.error.message;render();return}
   if(chk.data&&chk.data.length>0){profileUsernameSaving=false;profileUsernameErr='Username already taken!';render();return}
   /* Update */
-  var upd=await sb.from('profiles').update({username:newName}).eq('id',state.user.id);
+  /* Update — chain .select() so we can detect RLS-blocked updates (returns 0 rows) */
+  var upd=await sb.from('profiles').update({username:newName}).eq('id',state.user.id).select();
   profileUsernameSaving=false;
-  if(upd.error){profileUsernameErr=upd.error.message;render();return}
+  if(upd.error){console.error('username update:',upd.error);profileUsernameErr=upd.error.message;render();return}
+  if(!upd.data||upd.data.length===0){
+    /* Row exists but RLS blocked it — try upsert as fallback (covers missing profile row too) */
+    var ups=await sb.from('profiles').upsert([{id:state.user.id,username:newName}],{onConflict:'id'}).select();
+    if(ups.error||!ups.data||ups.data.length===0){
+      console.error('username upsert:',ups.error);
+      profileUsernameErr=(ups.error&&ups.error.message)||'Update blocked. Run the SQL in console to add UPDATE policy with WITH CHECK.';
+      render();return;
+    }
+  }
   state.user.username=newName;
   profileEditUsername=false;profileUsernameErr='';
   showToast('✅ Username updated!','success');
@@ -1014,6 +1031,170 @@ window.saveBalanceInput=function(type){
   profileBalanceMode=null;
   showToast('✅ Balance saved!','success');
 };
+
+/* ══════════════════════════════════════════════════════
+   SUMMARY PAGE — periodic totals + per-category breakdown
+   ══════════════════════════════════════════════════════ */
+function _sumRange(){
+  /* Returns {from, to} as 'YYYY-MM-DD' strings inclusive, or null for 'all' */
+  var now=new Date(),y=now.getFullYear(),m=now.getMonth(),d=now.getDate();
+  function iso(dt){return dt.toISOString().slice(0,10)}
+  if(sumPeriod==='month')return{from:iso(new Date(y,m,1)),to:iso(new Date(y,m+1,0))};
+  if(sumPeriod==='3month')return{from:iso(new Date(y,m-2,1)),to:iso(new Date(y,m+1,0))};
+  if(sumPeriod==='year')return{from:iso(new Date(y,0,1)),to:iso(new Date(y,11,31))};
+  if(sumPeriod==='all')return null;
+  if(sumPeriod==='custom'&&sumCustomFrom&&sumCustomTo)return{from:sumCustomFrom,to:sumCustomTo};
+  return null;
+}
+function _sumLabel(){
+  var r=_sumRange();
+  if(!r)return'All-time';
+  return fmtDate(r.from)+' → '+fmtDate(r.to);
+}
+
+function renderSummary(){
+  var items=sumType==='expense'?getExp():getInc();
+  var cats=getCats(sumType);
+  function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'Uncategorized'}
+  var r=_sumRange();
+  var filtered=r?items.filter(function(it){return it.date>=r.from&&it.date<=r.to}):items.slice();
+  var total=filtered.reduce(function(s,x){return s+x.amount},0);
+
+  /* Category aggregation */
+  var byCat={};
+  filtered.forEach(function(it){var k=it.categoryId||'_none';if(!byCat[k])byCat[k]={name:getCN(it.categoryId),amount:0,count:0};byCat[k].amount+=it.amount;byCat[k].count++});
+  var catList=Object.keys(byCat).map(function(k){return byCat[k]}).sort(function(a,b){return b.amount-a.amount});
+
+  var amtCls=sumType==='expense'?'text-red':'text-green';
+  var sign=sumType==='expense'?'-':'+';
+  var today=new Date().toISOString().slice(0,10);
+
+  var h='<div class="space-y-3">';
+  h+='<h2 style="font-size:20px">📊 SUMMARY</h2>';
+  h+='<p style="font-size:16px" class="text-muted">'+_sumLabel()+'</p>';
+
+  /* Type tabs */
+  h+='<div class="tab-bar">'
+    +'<button class="'+(sumType==='expense'?'active':'')+'" style="font-size:14px" onclick="setSumType(\'expense\')">💸 EXPENSES</button>'
+    +'<button class="'+(sumType==='income'?'active':'')+'" style="font-size:14px" onclick="setSumType(\'income\')">💰 INCOME</button>'
+    +'</div>';
+
+  /* Period tabs */
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">📅 RANGE</p>';
+  h+='<div class="tab-bar">';
+  [{k:'month',l:'MONTH'},{k:'3month',l:'3MO'},{k:'year',l:'YEAR'},{k:'all',l:'ALL'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
+    h+='<button class="'+(sumPeriod===p.k?'active':'')+'" style="font-size:13px" onclick="setSumPeriod(\''+p.k+'\')">'+p.l+'</button>';
+  });
+  h+='</div>';
+  if(sumPeriod==='custom'){
+    h+='<div class="flex gap-1 mt-2 items-end">';
+    h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="sum-from" class="pb-sm" style="font-size:11px" max="'+today+'" value="'+esc(sumCustomFrom)+'"/></div>';
+    h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="sum-to" class="pb-sm" style="font-size:11px" max="'+today+'" value="'+esc(sumCustomTo)+'"/></div>';
+    h+='<button onclick="applySumCustom()" class="btn" style="font-size:12px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  /* Total card */
+  h+='<div class="pb bg-card p-3 text-center">'
+    +'<p style="font-size:14px" class="text-muted mb-1">TOTAL '+(sumType==='expense'?'EXPENSES':'INCOME')+'</p>'
+    +'<p style="font-size:20px" class="'+amtCls+'">'+sign+idr(total)+'</p>'
+    +'<p style="font-size:12px" class="text-muted mt-1">'+filtered.length+' transactions across '+catList.length+' categor'+(catList.length===1?'y':'ies')+'</p>'
+    +'</div>';
+
+  /* Bar chart */
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">📊 BY CATEGORY</p>';
+  if(catList.length===0){
+    h+='<p style="font-size:14px" class="text-muted text-center" style="padding:16px 0">No data in this range.</p>';
+  }else{
+    h+='<canvas id="sum-chart" height="200" title="Hover bars for details"></canvas>';
+    /* Legend / breakdown rows */
+    h+='<div class="space-y-1 mt-2">';
+    catList.forEach(function(c){
+      var pct=total>0?(c.amount/total*100):0;
+      h+='<div class="pb-sm bg-bg p-2">'
+        +'<div class="flex justify-between items-center mb-1"><span style="font-size:13px" class="text-primary">'+esc(c.name)+'</span>'
+        +'<span style="font-size:13px" class="'+amtCls+'">'+sign+idr(c.amount)+'</span></div>'
+        +'<div style="height:6px;background:var(--bg);border:1px solid var(--muted);position:relative"><div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+(sumType==='expense'?'var(--red)':'var(--green)')+'"></div></div>'
+        +'<div class="flex justify-between mt-1"><span style="font-size:10px" class="text-muted">'+c.count+' txn</span><span style="font-size:10px" class="text-muted">'+pct.toFixed(1)+'%</span></div>'
+        +'</div>';
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+
+  h+='</div>';
+  return h;
+}
+
+window.setSumType=function(t){sumType=t;sumHover=null;render()};
+window.setSumPeriod=function(p){sumPeriod=p;sumHover=null;render()};
+window.applySumCustom=function(){
+  var f=document.getElementById('sum-from'),t=document.getElementById('sum-to');
+  if(!f||!t||!f.value||!t.value){showToast('Please pick both dates');return}
+  if(t.value<f.value){showToast('End date must be after start date');return}
+  sumCustomFrom=f.value;sumCustomTo=t.value;render();
+};
+
+var _sumGeom=null;
+function drawSumChart(){
+  var c=document.getElementById('sum-chart');if(!c)return;
+  var ctx=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=200;
+  var items=sumType==='expense'?getExp():getInc();
+  var cats=getCats(sumType);
+  function getCN(id){var x=cats.find(function(z){return z.id===id});return x?x.name:'Uncategorized'}
+  var r=_sumRange();
+  var filtered=r?items.filter(function(it){return it.date>=r.from&&it.date<=r.to}):items.slice();
+  var byCat={};
+  filtered.forEach(function(it){var k=it.categoryId||'_none';if(!byCat[k])byCat[k]={name:getCN(it.categoryId),amount:0};byCat[k].amount+=it.amount});
+  var catList=Object.keys(byCat).map(function(k){return byCat[k]}).sort(function(a,b){return b.amount-a.amount});
+  if(catList.length===0)return;
+  var max=Math.max.apply(null,catList.map(function(x){return x.amount}).concat([1]));
+  var W=c.width,H=c.height,pad=30,padBottom=50,gW=W-pad*2,gH=H-pad-padBottom;
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='rgba(139,139,139,0.2)';ctx.lineWidth=1;
+  for(var i=0;i<=4;i++){var y=pad+gH*(1-i/4);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke()}
+  var n=catList.length,barW=gW/n;
+  var color=sumType==='expense'?'#e84040':'#38b764';
+  var bars=[];
+  for(var i=0;i<n;i++){
+    var x=pad+i*barW,bw=barW*0.7;
+    var eh=catList[i].amount/max*gH;
+    var bx=x+barW*0.15,by=pad+gH-eh,bh=Math.max(eh,1);
+    bars.push({x:bx,y:by,w:bw,h:bh,fullX:x,fullW:barW,label:catList[i].name,value:catList[i].amount});
+    ctx.fillStyle=color;ctx.fillRect(bx,by,bw,bh);
+    /* x label — truncated */
+    ctx.fillStyle='#f4f4f4';ctx.font='9px "Press Start 2P"';ctx.textAlign='center';
+    var lbl=catList[i].name;if(lbl.length>8)lbl=lbl.slice(0,7)+'…';
+    ctx.fillText(lbl,x+barW/2,H-padBottom+18);
+  }
+  _sumGeom={bars:bars,W:W,H:H};
+
+  if(sumHover){
+    ctx.font='10px "Press Start 2P"';
+    var t1=sumHover.label,t2=idr(sumHover.value);
+    var tw=Math.max(ctx.measureText(t1).width,ctx.measureText(t2).width)+14;
+    var th=34;
+    var tx=Math.min(Math.max(sumHover.x-tw/2,2),W-tw-2);
+    var ty=Math.max(sumHover.y-th-6,2);
+    ctx.fillStyle='rgba(26,28,44,0.95)';ctx.strokeStyle='#f4f4f4';ctx.lineWidth=2;
+    ctx.fillRect(tx,ty,tw,th);ctx.strokeRect(tx,ty,tw,th);
+    ctx.fillStyle='#f4f4f4';ctx.textAlign='center';ctx.fillText(t1,tx+tw/2,ty+13);
+    ctx.fillStyle=color;ctx.fillText(t2,tx+tw/2,ty+27);
+  }
+
+  c.onmousemove=function(ev){
+    if(!_sumGeom)return;
+    var rect=c.getBoundingClientRect();
+    var mx=(ev.clientX-rect.left)*(c.width/rect.width);
+    var found=null;
+    for(var i=0;i<_sumGeom.bars.length;i++){var b=_sumGeom.bars[i];if(mx>=b.fullX&&mx<=b.fullX+b.fullW){found={x:b.x+b.w/2,y:b.y,label:b.label,value:b.value};break}}
+    if(found&&(!sumHover||sumHover.label!==found.label)){sumHover=found;drawSumChart()}
+    else if(!found&&sumHover){sumHover=null;drawSumChart()}
+  };
+  c.onmouseleave=function(){if(sumHover){sumHover=null;drawSumChart()}};
+}
 
 /* ══════════════════════════════════════════════════════
    INIT — Supabase auth state listener
