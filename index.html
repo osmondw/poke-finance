@@ -89,11 +89,13 @@ var state={page:'dashboard',user:null,chartPeriod:'week',chartCustomFrom:'',char
 /* ── UI state ────────────────────────────────────────── */
 var authMode='login',authErr='',authLoading=false;
 var trackerTab='expense',trackerShowForm=false,trackerShowNewCat=false,trackerEditId=null,trackerEditType=null;
+var trackerPeriod='month',trackerCustomFrom='',trackerCustomTo=''; /* month | all | custom */
 var billShowCreate=false,billView=null,billMethod='equal',billSelParts=[],billItems=[],billSplits=[];
 var billFormTitle='',billFormTotal='',billFormBefore='',billFormTax='',billEditId=null;
 var partEditId=null,partNameErr='';
 var logoutWarn=false;
 var profileBalanceMode=null; /* null | 'initial' | 'current' */
+var profileEditUsername=false,profileUsernameErr='';
 
 /* ── Toast ───────────────────────────────────────────── */
 var _toastTimer=null;
@@ -450,32 +452,37 @@ function renderDashboard(){
   }
   h+='<div class="flex justify-end mt-1" style="font-size:12px"><span class="text-red">■ Expense</span></div></div>';
 
-  /* Battle stats */
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
-  h+='<div class="flex justify-between" style="font-size:12px"><span>Bills Split</span><span class="text-accent">'+bills.length+'</span></div>';
+  /* Battle stats — current month only */
+  var monthLabel=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
+  h+='<div class="flex justify-between" style="font-size:12px"><span>Bills Split (all-time)</span><span class="text-accent">'+bills.length+'</span></div>';
   h+='<div class="flex justify-between" style="font-size:12px"><span>This Month Transactions</span><span class="text-accent">'+(mExp.length+mInc.length)+'</span></div>';
   h+='</div></div>';
 
-  /* Recent expenses */
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
-  if(exps.length===0)h+='<p style="font-size:12px" class="text-muted">No wild expenses appeared yet…</p>';
-  else exps.slice(0,3).forEach(function(e){
-    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
-      +'<div><span>'+esc(getCN(e.categoryId))+(e.note?' – '+esc(e.note):'')+'</span>'
-      +'<p style="font-size:10px" class="text-muted mt-1">📅 '+fmtDate(e.date)+'</p></div>'
-      +'<span class="text-red" style="white-space:nowrap;margin-left:10px">-'+idr(e.amount)+'</span></div>';
+  /* Expenses by category — current month */
+  var allCats=getCats();
+  function catName(id){var c=allCats.find(function(x){return x.id===id});return c?c.name:'???'}
+  var expByCat={};
+  mExp.forEach(function(e){expByCat[e.categoryId]=(expByCat[e.categoryId]||0)+e.amount});
+  var expCatList=Object.keys(expByCat).map(function(k){return{id:k,total:expByCat[k]}}).sort(function(a,b){return b.total-a.total});
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">💸 EXPENSES BY CATEGORY <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
+  if(expCatList.length===0)h+='<p style="font-size:12px" class="text-muted">No expenses this month.</p>';
+  else expCatList.forEach(function(r){
+    h+='<div class="flex justify-between" style="font-size:12px"><span>'+esc(catName(r.id))+'</span><span class="text-red">-'+idr(r.total)+'</span></div>';
   });
-  h+='</div>';
+  h+='<div class="flex justify-between mt-1" style="font-size:13px;border-top:1px solid var(--muted);padding-top:4px"><span class="text-muted">TOTAL</span><span class="text-red">-'+idr(tExp)+'</span></div>';
+  h+='</div></div>';
 
-  /* Recent income */
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">✨ RECENT INCOME</p>';
-  if(incs.length===0)h+='<p style="font-size:12px" class="text-muted">No PokéCoins earned yet…</p>';
-  else incs.slice(0,3).forEach(function(i){
-    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
-      +'<div><span>'+esc(i.source)+(i.note?' – '+esc(i.note):'')+'</span>'
-      +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(i.date)+'</p></div>'
-      +'<span class="text-green" style="white-space:nowrap;margin-left:6px">+'+idr(i.amount)+'</span></div>';
+  /* Income by category — current month */
+  var incByCat={};
+  mInc.forEach(function(i){incByCat[i.categoryId]=(incByCat[i.categoryId]||0)+i.amount});
+  var incCatList=Object.keys(incByCat).map(function(k){return{id:k,total:incByCat[k]}}).sort(function(a,b){return b.total-a.total});
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">💰 INCOME BY CATEGORY <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
+  if(incCatList.length===0)h+='<p style="font-size:12px" class="text-muted">No income this month.</p>';
+  else incCatList.forEach(function(r){
+    h+='<div class="flex justify-between" style="font-size:12px"><span>'+esc(catName(r.id))+'</span><span class="text-green">+'+idr(r.total)+'</span></div>';
   });
+  h+='<div class="flex justify-between mt-1" style="font-size:13px;border-top:1px solid var(--muted);padding-top:4px"><span class="text-muted">TOTAL</span><span class="text-green">+'+idr(tInc)+'</span></div>';
   h+='</div></div>';
   return h;
 }
@@ -562,32 +569,109 @@ function renderTracker(){
     h+='</form>';
   }
 
-  h+='<div class="space-y-1">';
-  if(items.length===0){h+='<div class="poke-dialog"><p style="font-size:16px" class="text-muted">'+(tab==='expense'?'No wild expenses appeared!':'No PokéCoins earned yet!')+'</p></div>'}
-  else items.forEach(function(it){
-    if(trackerEditId===it.id){
-      h+='<div class="pb-sm bg-card p-2 space-y-1">';
-      h+='<p style="font-size:7px" class="text-primary mb-1">✏️ EDITING ENTRY</p>';
-      h+='<form onsubmit="trackerUpdate(event,\''+it.id+'\',\''+tab+'\')" class="space-y-1">';
-      h+='<div class="form-group"><label style="font-size:6px">AMOUNT (Rp)</label><input id="te-amt" type="text" inputmode="numeric" class="pb-sm" value="'+fmtDisp(it.amount)+'" required oninput="numfmt(this)" data-raw="'+Math.round(it.amount)+'"/></div>';
-      if(tab==='income')h+='<div class="form-group"><label style="font-size:6px">SOURCE</label><input id="te-src" class="pb-sm" value="'+esc(it.source||'')+'"/></div>';
-      h+='<div class="form-group"><label style="font-size:6px">CATEGORY</label><select id="te-cat" class="pb-sm" required><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===it.categoryId?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div>';
-      h+='<div class="form-group"><label style="font-size:6px">DATE</label><input id="te-date" type="date" class="pb-sm" value="'+(it.date||new Date().toISOString().slice(0,10))+'"/></div>';
-      h+='<div class="form-group"><label style="font-size:6px">NOTE</label><input id="te-note" class="pb-sm" value="'+esc(it.note||'')+'"/></div>';
-      h+='<div class="flex gap-1 mt-1"><button type="submit" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:7px">SAVE</button><button type="button" class="btn" style="background:var(--bg);font-size:7px" onclick="trackerCancelEdit()">CANCEL</button></div>';
-      h+='</form></div>';
-    }else{
-      h+='<div class="pb-sm bg-card p-2 flex items-center justify-between">'
-        +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:9px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:7px" class="text-accent">🔄</span>':'')+'</div>'
-        +'<p style="font-size:6px" class="text-muted">'+fmtDate(it.date)+(it.note?' · '+esc(it.note):'')+'</p></div>'
-        +'<div class="flex items-center gap-1"><span style="font-size:9px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
-        +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
-        +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
-    }
+  /* Period filter */
+  var todayStr=new Date().toISOString().slice(0,10);
+  h+='<div class="pb bg-card p-2"><p style="font-size:12px" class="text-muted mb-1">📅 PERIOD</p>';
+  h+='<div class="tab-bar">';
+  [{k:'month',l:'THIS MONTH'},{k:'all',l:'ALL TIME'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
+    h+='<button class="'+(trackerPeriod===p.k?'active':'')+'" style="font-size:11px" onclick="setTrackerPeriod(\''+p.k+'\')">'+p.l+'</button>';
   });
+  h+='</div>';
+  if(trackerPeriod==='custom'){
+    h+='<div class="flex gap-1 mt-1 items-end">';
+    h+='<div style="flex:1"><label style="font-size:11px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="tp-from" class="pb-sm" style="font-size:11px" max="'+todayStr+'" value="'+esc(trackerCustomFrom)+'"/></div>';
+    h+='<div style="flex:1"><label style="font-size:11px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="tp-to" class="pb-sm" style="font-size:11px" max="'+todayStr+'" value="'+esc(trackerCustomTo)+'"/></div>';
+    h+='<button onclick="applyTrackerCustom()" class="btn" style="font-size:11px;background:var(--primary);color:var(--primary-fg);padding:6px">APPLY</button>';
+    h+='</div>';
+  }
+  h+='</div>';
+
+  /* Filter items by period */
+  var filtered=items.slice();
+  if(trackerPeriod==='month'){
+    var nowD=new Date(),mm=nowD.getMonth(),yy=nowD.getFullYear();
+    filtered=filtered.filter(function(it){var d=new Date(it.date+'T00:00:00');return d.getMonth()===mm&&d.getFullYear()===yy});
+  }else if(trackerPeriod==='custom'&&trackerCustomFrom&&trackerCustomTo){
+    filtered=filtered.filter(function(it){return it.date>=trackerCustomFrom&&it.date<=trackerCustomTo});
+  }
+
+  /* Period total */
+  var periodTotal=filtered.reduce(function(s,it){return s+it.amount},0);
+  h+='<div class="pb-sm bg-bg p-2 flex justify-between" style="font-size:13px"><span class="text-muted">TOTAL</span><span class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(periodTotal)+'</span></div>';
+
+  /* Group by Year > Month > Date */
+  h+='<div class="space-y-2">';
+  if(filtered.length===0){h+='<div class="poke-dialog"><p style="font-size:14px" class="text-muted">'+(tab==='expense'?'No wild expenses in this period!':'No PokéCoins earned in this period!')+'</p></div>'}
+  else{
+    var groups={}; /* year -> month -> date -> [items] */
+    filtered.forEach(function(it){
+      var d=new Date(it.date+'T00:00:00');
+      var y=d.getFullYear(),mo=d.getMonth(),dk=it.date;
+      if(!groups[y])groups[y]={};
+      if(!groups[y][mo])groups[y][mo]={};
+      if(!groups[y][mo][dk])groups[y][mo][dk]=[];
+      groups[y][mo][dk].push(it);
+    });
+    var years=Object.keys(groups).map(Number).sort(function(a,b){return b-a});
+    var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    years.forEach(function(y){
+      var yTotal=0;
+      Object.keys(groups[y]).forEach(function(mo){Object.keys(groups[y][mo]).forEach(function(dk){groups[y][mo][dk].forEach(function(it){yTotal+=it.amount})})});
+      h+='<div class="pb bg-card p-2">';
+      h+='<div class="flex justify-between items-center mb-1"><span style="font-size:14px" class="text-primary">📆 '+y+'</span><span style="font-size:11px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(yTotal)+'</span></div>';
+      var months=Object.keys(groups[y]).map(Number).sort(function(a,b){return b-a});
+      months.forEach(function(mo){
+        var mTotal=0;
+        Object.keys(groups[y][mo]).forEach(function(dk){groups[y][mo][dk].forEach(function(it){mTotal+=it.amount})});
+        h+='<div style="margin-left:8px;border-left:2px solid var(--muted);padding-left:6px;margin-top:4px">';
+        h+='<div class="flex justify-between items-center mb-1"><span style="font-size:12px" class="text-secondary">▸ '+monthNames[mo]+' '+y+'</span><span style="font-size:10px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(mTotal)+'</span></div>';
+        var dates=Object.keys(groups[y][mo]).sort(function(a,b){return a<b?1:-1});
+        dates.forEach(function(dk){
+          var dayItems=groups[y][mo][dk];
+          var dTotal=dayItems.reduce(function(s,it){return s+it.amount},0);
+          h+='<div style="margin-left:6px;border-left:1px dashed var(--muted);padding-left:6px;margin-top:3px">';
+          h+='<div class="flex justify-between items-center"><span style="font-size:11px" class="text-accent">— '+fmtDate(dk)+'</span><span style="font-size:10px" class="text-muted">'+(tab==='expense'?'-':'+')+idr(dTotal)+'</span></div>';
+          dayItems.forEach(function(it){
+            if(trackerEditId===it.id){
+              h+='<div class="pb-sm bg-card p-2 space-y-1 mt-1">';
+              h+='<p style="font-size:10px" class="text-primary mb-1">✏️ EDITING ENTRY</p>';
+              h+='<form onsubmit="trackerUpdate(event,\''+it.id+'\',\''+tab+'\')" class="space-y-1">';
+              h+='<div class="form-group"><label style="font-size:10px">AMOUNT (Rp)</label><input id="te-amt" type="text" inputmode="numeric" class="pb-sm" value="'+fmtDisp(it.amount)+'" required oninput="numfmt(this)" data-raw="'+Math.round(it.amount)+'"/></div>';
+              if(tab==='income')h+='<div class="form-group"><label style="font-size:10px">SOURCE</label><input id="te-src" class="pb-sm" value="'+esc(it.source||'')+'"/></div>';
+              h+='<div class="form-group"><label style="font-size:10px">CATEGORY</label><select id="te-cat" class="pb-sm" required><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===it.categoryId?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div>';
+              h+='<div class="form-group"><label style="font-size:10px">DATE</label><input id="te-date" type="date" class="pb-sm" value="'+(it.date||new Date().toISOString().slice(0,10))+'"/></div>';
+              h+='<div class="form-group"><label style="font-size:10px">NOTE</label><input id="te-note" class="pb-sm" value="'+esc(it.note||'')+'"/></div>';
+              h+='<div class="flex gap-1 mt-1"><button type="submit" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:11px">SAVE</button><button type="button" class="btn" style="background:var(--bg);font-size:11px" onclick="trackerCancelEdit()">CANCEL</button></div>';
+              h+='</form></div>';
+            }else{
+              h+='<div class="pb-sm bg-bg p-1 flex items-center justify-between mt-1">'
+                +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:11px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:9px" class="text-accent">🔄</span>':'')+'</div>'
+                +(it.note?'<p style="font-size:9px" class="text-muted">'+esc(it.note)+'</p>':'')
+                +'</div>'
+                +'<div class="flex items-center gap-1"><span style="font-size:11px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
+                +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
+                +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
+            }
+          });
+          h+='</div>';
+        });
+        h+='</div>';
+      });
+      h+='</div>';
+    });
+  }
   h+='</div></div>';
   return h;
 }
+
+window.setTrackerPeriod=function(p){trackerPeriod=p;render()};
+window.applyTrackerCustom=function(){
+  var f=(document.getElementById('tp-from')||{}).value;
+  var t=(document.getElementById('tp-to')||{}).value;
+  if(!f||!t){showToast('Please pick both dates');return}
+  if(f>t){showToast('End date must be after start date');return}
+  trackerCustomFrom=f;trackerCustomTo=t;render();
+};
 
 window.setTrackerTab=function(t){trackerTab=t;trackerShowForm=false;trackerShowNewCat=false;trackerEditId=null;render()};
 window.trackerToggleForm=function(){trackerShowForm=!trackerShowForm;trackerShowNewCat=false;trackerEditId=null;render()};
@@ -818,7 +902,18 @@ function renderProfile(){
   var h='<div class="space-y-3"><h2 style="font-size:20px">🎒 TRAINER CARD</h2>';
 
   /* Trainer info */
-  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center"><span style="font-size:20px">🧢</span></div><div><p style="font-size:16px">'+esc(u.username)+'</p><p style="font-size:8px" class="text-muted">'+esc(u.email)+'</p></div></div></div>';
+  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">🧢</span></div><div style="flex:1">';
+  if(profileEditUsername){
+    h+='<p style="font-size:10px" class="text-muted mb-1">CHANGE USERNAME</p>';
+    h+='<div class="flex gap-1"><input id="pf-uname" class="pb-sm" style="flex:1;font-size:12px" value="'+esc(u.username)+'" maxlength="30" placeholder="New username"/>';
+    h+='<button onclick="saveUsername()" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:10px">SAVE</button>';
+    h+='<button onclick="cancelUsername()" class="btn" style="background:var(--bg);font-size:10px">✕</button></div>';
+    if(profileUsernameErr)h+='<p style="font-size:10px;color:var(--red);margin-top:4px">'+esc(profileUsernameErr)+'</p>';
+  }else{
+    h+='<div class="flex items-center gap-1"><p style="font-size:16px">'+esc(u.username)+'</p><button onclick="editUsername()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button></div>';
+    h+='<p style="font-size:8px" class="text-muted">'+esc(u.email)+'</p>';
+  }
+  h+='</div></div></div>';
 
   /* Trainer stats */
   h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
@@ -870,6 +965,25 @@ window.saveBalanceInput=function(type){
   saveInitialBalance(val);
   profileBalanceMode=null;
   showToast('✅ Balance saved!','success');
+};
+
+window.editUsername=function(){profileEditUsername=true;profileUsernameErr='';render()};
+window.cancelUsername=function(){profileEditUsername=false;profileUsernameErr='';render()};
+window.saveUsername=async function(){
+  var el=document.getElementById('pf-uname');if(!el)return;
+  var newName=(el.value||'').trim();
+  if(!newName){profileUsernameErr='Username cannot be empty';render();return}
+  if(newName===state.user.username){profileEditUsername=false;render();return}
+  /* check uniqueness */
+  var chk=await sb.from('profiles').select('id').eq('username',newName);
+  if(chk.data&&chk.data.length>0&&chk.data[0].id!==state.user.id){
+    profileUsernameErr='Username already taken';render();return;
+  }
+  var res=await sb.from('profiles').update({username:newName}).eq('id',state.user.id);
+  if(res.error){profileUsernameErr=res.error.message;render();return}
+  state.user.username=newName;
+  profileEditUsername=false;profileUsernameErr='';
+  showToast('✅ Username updated!','success');
 };
 
 /* ══════════════════════════════════════════════════════
