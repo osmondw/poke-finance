@@ -89,13 +89,14 @@ var state={page:'dashboard',user:null,chartPeriod:'week',chartCustomFrom:'',char
 /* ── UI state ────────────────────────────────────────── */
 var authMode='login',authErr='',authLoading=false;
 var trackerTab='expense',trackerShowForm=false,trackerShowNewCat=false,trackerEditId=null,trackerEditType=null;
-var trackerPeriod='month',trackerCustomFrom='',trackerCustomTo=''; /* month | all | custom */
 var billShowCreate=false,billView=null,billMethod='equal',billSelParts=[],billItems=[],billSplits=[];
 var billFormTitle='',billFormTotal='',billFormBefore='',billFormTax='',billEditId=null;
 var partEditId=null,partNameErr='';
 var logoutWarn=false;
 var profileBalanceMode=null; /* null | 'initial' | 'current' */
-var profileEditUsername=false,profileUsernameErr='';
+var profileEditUsername=false,profileUsernameErr='',profileUsernameSaving=false;
+var trackerOpen={}; /* keys: 'y-2025', 'm-2025-03', 'd-2025-03-14' */
+var chartHover=null; /* {x,y,label,value} */
 
 /* ── Toast ───────────────────────────────────────────── */
 var _toastTimer=null;
@@ -419,8 +420,12 @@ function renderDashboard(){
   var cats=getCats('expense');
   function getCN(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'???'}
 
+  var monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var monthLabel=monthNames[m]+' '+y;
+
   var h='<div class="space-y-3">';
   h+='<div class="poke-dialog"><p style="font-size:18px" class="text-muted mb-1">PROF. OAK says:</p><p style="font-size:20px">Welcome back, <span class="text-primary">'+esc(state.user.username)+'</span>! Here\'s your PokéDex report!</p></div>';
+  h+='<p style="font-size:16px" class="text-muted text-center">📅 '+monthLabel+' — CURRENT MONTH SUMMARY</p>';
 
   /* Stats cards */
   h+='<div class="grid grid-3 gap-2">';
@@ -448,41 +453,36 @@ function renderDashboard(){
   }
 
   if(state.chartPeriod!=='custom'||(state.chartCustomFrom&&state.chartCustomTo)){
-    h+='<canvas id="chart-main" height="160"></canvas>';
+    h+='<canvas id="chart-main" height="180" title="Hover bars to see date and total"></canvas>';
   }
   h+='<div class="flex justify-end mt-1" style="font-size:12px"><span class="text-red">■ Expense</span></div></div>';
 
-  /* Battle stats — current month only */
-  var monthLabel=now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
-  h+='<div class="flex justify-between" style="font-size:12px"><span>Bills Split (all-time)</span><span class="text-accent">'+bills.length+'</span></div>';
+  /* Battle stats */
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">⚔️ BATTLE STATS</p><div class="space-y-1">';
+  h+='<div class="flex justify-between" style="font-size:12px"><span>Bills Split</span><span class="text-accent">'+bills.length+'</span></div>';
   h+='<div class="flex justify-between" style="font-size:12px"><span>This Month Transactions</span><span class="text-accent">'+(mExp.length+mInc.length)+'</span></div>';
   h+='</div></div>';
 
-  /* Expenses by category — current month */
-  var allCats=getCats();
-  function catName(id){var c=allCats.find(function(x){return x.id===id});return c?c.name:'???'}
-  var expByCat={};
-  mExp.forEach(function(e){expByCat[e.categoryId]=(expByCat[e.categoryId]||0)+e.amount});
-  var expCatList=Object.keys(expByCat).map(function(k){return{id:k,total:expByCat[k]}}).sort(function(a,b){return b.total-a.total});
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">💸 EXPENSES BY CATEGORY <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
-  if(expCatList.length===0)h+='<p style="font-size:12px" class="text-muted">No expenses this month.</p>';
-  else expCatList.forEach(function(r){
-    h+='<div class="flex justify-between" style="font-size:12px"><span>'+esc(catName(r.id))+'</span><span class="text-red">-'+idr(r.total)+'</span></div>';
+  /* Recent expenses */
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">🔥 RECENT EXPENSES</p>';
+  if(exps.length===0)h+='<p style="font-size:12px" class="text-muted">No wild expenses appeared yet…</p>';
+  else exps.slice(0,3).forEach(function(e){
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
+      +'<div><span>'+esc(getCN(e.categoryId))+(e.note?' – '+esc(e.note):'')+'</span>'
+      +'<p style="font-size:10px" class="text-muted mt-1">📅 '+fmtDate(e.date)+'</p></div>'
+      +'<span class="text-red" style="white-space:nowrap;margin-left:10px">-'+idr(e.amount)+'</span></div>';
   });
-  h+='<div class="flex justify-between mt-1" style="font-size:13px;border-top:1px solid var(--muted);padding-top:4px"><span class="text-muted">TOTAL</span><span class="text-red">-'+idr(tExp)+'</span></div>';
-  h+='</div></div>';
+  h+='</div>';
 
-  /* Income by category — current month */
-  var incByCat={};
-  mInc.forEach(function(i){incByCat[i.categoryId]=(incByCat[i.categoryId]||0)+i.amount});
-  var incCatList=Object.keys(incByCat).map(function(k){return{id:k,total:incByCat[k]}}).sort(function(a,b){return b.total-a.total});
-  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">💰 INCOME BY CATEGORY <span style="font-size:10px" class="text-secondary">('+monthLabel+')</span></p><div class="space-y-1">';
-  if(incCatList.length===0)h+='<p style="font-size:12px" class="text-muted">No income this month.</p>';
-  else incCatList.forEach(function(r){
-    h+='<div class="flex justify-between" style="font-size:12px"><span>'+esc(catName(r.id))+'</span><span class="text-green">+'+idr(r.total)+'</span></div>';
+  /* Recent income */
+  h+='<div class="pb bg-card p-3"><p style="font-size:16px" class="text-muted mb-1">✨ RECENT INCOME</p>';
+  if(incs.length===0)h+='<p style="font-size:12px" class="text-muted">No PokéCoins earned yet…</p>';
+  else incs.slice(0,3).forEach(function(i){
+    h+='<div class="flex justify-between items-start pb-sm p-1 mb-1 bg-bg" style="font-size:10px">'
+      +'<div><span>'+esc(i.source)+(i.note?' – '+esc(i.note):'')+'</span>'
+      +'<p style="font-size:6px" class="text-muted mt-1">📅 '+fmtDate(i.date)+'</p></div>'
+      +'<span class="text-green" style="white-space:nowrap;margin-left:6px">+'+idr(i.amount)+'</span></div>';
   });
-  h+='<div class="flex justify-between mt-1" style="font-size:13px;border-top:1px solid var(--muted);padding-top:4px"><span class="text-muted">TOTAL</span><span class="text-green">+'+idr(tInc)+'</span></div>';
   h+='</div></div>';
   return h;
 }
@@ -500,47 +500,87 @@ window.applyCustomRange=function(){
   state.chartCustomFrom=f;state.chartCustomTo=t;render();
 };
 
+var _chartGeom=null; /* stores bar positions for hover detection */
 function drawCharts(){
   var c=document.getElementById('chart-main');if(!c)return;
   var ctx=c.getContext('2d');
-  c.width=c.offsetWidth;c.height=160;
+  c.width=c.offsetWidth;c.height=180;
   var exps=getExp();
   var period=state.chartPeriod;
   var now=new Date();
-  var labels=[],expData=[];
+  var labels=[],expData=[],fullLabels=[];
 
   if(period==='week'){
-    for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(['Sun','Mon','Tue','Wed','Thr','Fri','Sat'][d.getDay()]);expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
+    for(var i=6;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]);fullLabels.push(fmtDate(ds));expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='month'){
-    for(var i=29;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(d.getDate().toString());expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
+    for(var i=29;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i);var ds=d.toISOString().slice(0,10);labels.push(d.getDate().toString());fullLabels.push(fmtDate(ds));expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='3month'){
-    for(var i=11;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i*7);var wStart=new Date(d);wStart.setDate(wStart.getDate()-6);var ws=wStart.toISOString().slice(0,10),we=d.toISOString().slice(0,10);labels.push('W'+(12-i));expData.push(exps.filter(function(e){return e.date>=ws&&e.date<=we}).reduce(function(s,e){return s+e.amount},0))}
+    for(var i=11;i>=0;i--){var d=new Date(now);d.setDate(d.getDate()-i*7);var wStart=new Date(d);wStart.setDate(wStart.getDate()-6);var ws=wStart.toISOString().slice(0,10),we=d.toISOString().slice(0,10);labels.push('W'+(12-i));fullLabels.push(fmtDate(ws)+' – '+fmtDate(we));expData.push(exps.filter(function(e){return e.date>=ws&&e.date<=we}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='year'){
     var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    for(var i=11;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);labels.push(months[d.getMonth()]);var ym=d.toISOString().slice(0,7);expData.push(exps.filter(function(e){return e.date.startsWith(ym)}).reduce(function(s,e){return s+e.amount},0))}
+    var monthsFull=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    for(var i=11;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);labels.push(months[d.getMonth()]);fullLabels.push(monthsFull[d.getMonth()]+' '+d.getFullYear());var ym=d.toISOString().slice(0,7);expData.push(exps.filter(function(e){return e.date.startsWith(ym)}).reduce(function(s,e){return s+e.amount},0))}
   }else if(period==='custom'&&state.chartCustomFrom&&state.chartCustomTo){
     var cur=new Date(state.chartCustomFrom+'T00:00:00');
     var endD=new Date(state.chartCustomTo+'T00:00:00');
     while(cur<=endD&&labels.length<=31){
       var ds=cur.toISOString().slice(0,10);
       labels.push((cur.getMonth()+1)+'/'+(cur.getDate()));
+      fullLabels.push(fmtDate(ds));
       expData.push(exps.filter(function(e){return e.date===ds}).reduce(function(s,e){return s+e.amount},0));
       cur.setDate(cur.getDate()+1);
     }
   }else{return}
 
   var max=Math.max.apply(null,expData.concat([1]));
-  var W=c.width,H=c.height,pad=30,gW=W-pad*2,gH=H-pad*2;
+  var W=c.width,H=c.height,pad=30,padBottom=42,gW=W-pad*2,gH=H-pad-padBottom;
   ctx.clearRect(0,0,W,H);
   ctx.strokeStyle='rgba(139,139,139,0.2)';ctx.lineWidth=1;
   for(var i=0;i<=4;i++){var y=pad+gH*(1-i/4);ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-pad,y);ctx.stroke()}
   var n=labels.length,barW=gW/n;
+  var bars=[];
   for(var i=0;i<n;i++){
     var x=pad+i*barW,bw=barW*0.7;
     var eh=expData[i]/max*gH;
-    ctx.fillStyle='#e84040';ctx.fillRect(x+barW*0.15,pad+gH-eh,bw,Math.max(eh,expData[i]>0?1:0));
-    if(n<=14||(i%Math.ceil(n/10)===0)){ctx.fillStyle='#8b8b8b';ctx.font='6px "Press Start 2P"';ctx.textAlign='center';ctx.fillText(labels[i],x+barW/2,H-4)}
+    var bx=x+barW*0.15, by=pad+gH-eh, bh=Math.max(eh,expData[i]>0?1:0);
+    bars.push({x:bx,y:by,w:bw,h:bh,fullX:x,fullW:barW,label:fullLabels[i]||labels[i],value:expData[i]});
+    ctx.fillStyle='#e84040';ctx.fillRect(bx,by,bw,bh);
+    if(n<=14||(i%Math.ceil(n/10)===0)){ctx.fillStyle='#f4f4f4';ctx.font='10px "Press Start 2P"';ctx.textAlign='center';ctx.fillText(labels[i],x+barW/2,H-12)}
   }
+  _chartGeom={bars:bars,W:W,H:H};
+
+  /* Hover tooltip */
+  if(chartHover){
+    ctx.font='9px "Press Start 2P"';
+    var t1=chartHover.label, t2=idr(chartHover.value);
+    var tw=Math.max(ctx.measureText(t1).width,ctx.measureText(t2).width)+12;
+    var th=30;
+    var tx=Math.min(Math.max(chartHover.x-tw/2,2),W-tw-2);
+    var ty=Math.max(chartHover.y-th-6,2);
+    ctx.fillStyle='rgba(26,28,44,0.95)';ctx.strokeStyle='#f4f4f4';ctx.lineWidth=2;
+    ctx.fillRect(tx,ty,tw,th);ctx.strokeRect(tx,ty,tw,th);
+    ctx.fillStyle='#f4f4f4';ctx.textAlign='center';
+    ctx.fillText(t1,tx+tw/2,ty+12);
+    ctx.fillStyle='#e84040';
+    ctx.fillText(t2,tx+tw/2,ty+24);
+  }
+
+  /* Attach hover handler once per render */
+  c.onmousemove=function(ev){
+    if(!_chartGeom)return;
+    var rect=c.getBoundingClientRect();
+    var scaleX=c.width/rect.width;
+    var mx=(ev.clientX-rect.left)*scaleX;
+    var my=(ev.clientY-rect.top)*(c.height/rect.height);
+    var found=null;
+    for(var i=0;i<_chartGeom.bars.length;i++){
+      var b=_chartGeom.bars[i];
+      if(mx>=b.fullX&&mx<=b.fullX+b.fullW){found={x:b.x+b.w/2,y:b.y,label:b.label,value:b.value};break}
+    }
+    if(found&&(!chartHover||chartHover.label!==found.label)){chartHover=found;drawCharts()}
+    else if(!found&&chartHover){chartHover=null;drawCharts()}
+  };
+  c.onmouseleave=function(){if(chartHover){chartHover=null;drawCharts()}};
 }
 
 /* ══════════════════════════════════════════════════════
@@ -569,110 +609,87 @@ function renderTracker(){
     h+='</form>';
   }
 
-  /* Period filter */
-  var todayStr=new Date().toISOString().slice(0,10);
-  h+='<div class="pb bg-card p-2"><p style="font-size:12px" class="text-muted mb-1">📅 PERIOD</p>';
-  h+='<div class="tab-bar">';
-  [{k:'month',l:'THIS MONTH'},{k:'all',l:'ALL TIME'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
-    h+='<button class="'+(trackerPeriod===p.k?'active':'')+'" style="font-size:11px" onclick="setTrackerPeriod(\''+p.k+'\')">'+p.l+'</button>';
-  });
-  h+='</div>';
-  if(trackerPeriod==='custom'){
-    h+='<div class="flex gap-1 mt-1 items-end">';
-    h+='<div style="flex:1"><label style="font-size:11px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="tp-from" class="pb-sm" style="font-size:11px" max="'+todayStr+'" value="'+esc(trackerCustomFrom)+'"/></div>';
-    h+='<div style="flex:1"><label style="font-size:11px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="tp-to" class="pb-sm" style="font-size:11px" max="'+todayStr+'" value="'+esc(trackerCustomTo)+'"/></div>';
-    h+='<button onclick="applyTrackerCustom()" class="btn" style="font-size:11px;background:var(--primary);color:var(--primary-fg);padding:6px">APPLY</button>';
-    h+='</div>';
-  }
-  h+='</div>';
-
-  /* Filter items by period */
-  var filtered=items.slice();
-  if(trackerPeriod==='month'){
-    var nowD=new Date(),mm=nowD.getMonth(),yy=nowD.getFullYear();
-    filtered=filtered.filter(function(it){var d=new Date(it.date+'T00:00:00');return d.getMonth()===mm&&d.getFullYear()===yy});
-  }else if(trackerPeriod==='custom'&&trackerCustomFrom&&trackerCustomTo){
-    filtered=filtered.filter(function(it){return it.date>=trackerCustomFrom&&it.date<=trackerCustomTo});
+  /* Render single entry (edit form or read-only row) */
+  function renderEntry(it){
+    if(trackerEditId===it.id){
+      var s='<div class="pb-sm bg-card p-2 space-y-1">';
+      s+='<p style="font-size:7px" class="text-primary mb-1">✏️ EDITING ENTRY</p>';
+      s+='<form onsubmit="trackerUpdate(event,\''+it.id+'\',\''+tab+'\')" class="space-y-1">';
+      s+='<div class="form-group"><label style="font-size:6px">AMOUNT (Rp)</label><input id="te-amt" type="text" inputmode="numeric" class="pb-sm" value="'+fmtDisp(it.amount)+'" required oninput="numfmt(this)" data-raw="'+Math.round(it.amount)+'"/></div>';
+      if(tab==='income')s+='<div class="form-group"><label style="font-size:6px">SOURCE</label><input id="te-src" class="pb-sm" value="'+esc(it.source||'')+'"/></div>';
+      s+='<div class="form-group"><label style="font-size:6px">CATEGORY</label><select id="te-cat" class="pb-sm" required><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===it.categoryId?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div>';
+      s+='<div class="form-group"><label style="font-size:6px">DATE</label><input id="te-date" type="date" class="pb-sm" value="'+(it.date||new Date().toISOString().slice(0,10))+'"/></div>';
+      s+='<div class="form-group"><label style="font-size:6px">NOTE</label><input id="te-note" class="pb-sm" value="'+esc(it.note||'')+'"/></div>';
+      s+='<div class="flex gap-1 mt-1"><button type="submit" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:7px">SAVE</button><button type="button" class="btn" style="background:var(--bg);font-size:7px" onclick="trackerCancelEdit()">CANCEL</button></div>';
+      s+='</form></div>';
+      return s;
+    }
+    return '<div class="pb-sm bg-card p-2 flex items-center justify-between">'
+      +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:14px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:10px" class="text-accent">🔄</span>':'')+'</div>'
+      +(it.note?'<p style="font-size:11px" class="text-muted">'+esc(it.note)+'</p>':'')+'</div>'
+      +'<div class="flex items-center gap-1"><span style="font-size:13px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
+      +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:14px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
+      +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:14px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
   }
 
-  /* Period total */
-  var periodTotal=filtered.reduce(function(s,it){return s+it.amount},0);
-  h+='<div class="pb-sm bg-bg p-2 flex justify-between" style="font-size:13px"><span class="text-muted">TOTAL</span><span class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(periodTotal)+'</span></div>';
-
-  /* Group by Year > Month > Date */
-  h+='<div class="space-y-2">';
-  if(filtered.length===0){h+='<div class="poke-dialog"><p style="font-size:14px" class="text-muted">'+(tab==='expense'?'No wild expenses in this period!':'No PokéCoins earned in this period!')+'</p></div>'}
-  else{
-    var groups={}; /* year -> month -> date -> [items] */
-    filtered.forEach(function(it){
+  if(items.length===0){
+    h+='<div class="poke-dialog"><p style="font-size:16px" class="text-muted">'+(tab==='expense'?'No wild expenses appeared!':'No PokéCoins earned yet!')+'</p></div>';
+  }else{
+    /* Group by year > month > date */
+    var groups={};
+    items.forEach(function(it){
       var d=new Date(it.date+'T00:00:00');
-      var y=d.getFullYear(),mo=d.getMonth(),dk=it.date;
-      if(!groups[y])groups[y]={};
-      if(!groups[y][mo])groups[y][mo]={};
-      if(!groups[y][mo][dk])groups[y][mo][dk]=[];
-      groups[y][mo][dk].push(it);
+      var y=d.getFullYear(),mo=String(d.getMonth()+1).padStart(2,'0');
+      var ymKey=y+'-'+mo, ymdKey=it.date;
+      if(!groups[y])groups[y]={total:0,months:{}};
+      if(!groups[y].months[ymKey])groups[y].months[ymKey]={total:0,monthIdx:d.getMonth(),days:{}};
+      if(!groups[y].months[ymKey].days[ymdKey])groups[y].months[ymKey].days[ymdKey]={total:0,items:[]};
+      groups[y].total+=it.amount;
+      groups[y].months[ymKey].total+=it.amount;
+      groups[y].months[ymKey].days[ymdKey].total+=it.amount;
+      groups[y].months[ymKey].days[ymdKey].items.push(it);
     });
-    var years=Object.keys(groups).map(Number).sort(function(a,b){return b-a});
     var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var amtCls=tab==='expense'?'text-red':'text-green';
+    var sign=tab==='expense'?'-':'+';
+    var years=Object.keys(groups).sort(function(a,b){return b-a});
+    h+='<div class="space-y-1">';
     years.forEach(function(y){
-      var yTotal=0;
-      Object.keys(groups[y]).forEach(function(mo){Object.keys(groups[y][mo]).forEach(function(dk){groups[y][mo][dk].forEach(function(it){yTotal+=it.amount})})});
-      h+='<div class="pb bg-card p-2">';
-      h+='<div class="flex justify-between items-center mb-1"><span style="font-size:14px" class="text-primary">📆 '+y+'</span><span style="font-size:11px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(yTotal)+'</span></div>';
-      var months=Object.keys(groups[y]).map(Number).sort(function(a,b){return b-a});
-      months.forEach(function(mo){
-        var mTotal=0;
-        Object.keys(groups[y][mo]).forEach(function(dk){groups[y][mo][dk].forEach(function(it){mTotal+=it.amount})});
-        h+='<div style="margin-left:8px;border-left:2px solid var(--muted);padding-left:6px;margin-top:4px">';
-        h+='<div class="flex justify-between items-center mb-1"><span style="font-size:12px" class="text-secondary">▸ '+monthNames[mo]+' '+y+'</span><span style="font-size:10px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(mTotal)+'</span></div>';
-        var dates=Object.keys(groups[y][mo]).sort(function(a,b){return a<b?1:-1});
-        dates.forEach(function(dk){
-          var dayItems=groups[y][mo][dk];
-          var dTotal=dayItems.reduce(function(s,it){return s+it.amount},0);
-          h+='<div style="margin-left:6px;border-left:1px dashed var(--muted);padding-left:6px;margin-top:3px">';
-          h+='<div class="flex justify-between items-center"><span style="font-size:11px" class="text-accent">— '+fmtDate(dk)+'</span><span style="font-size:10px" class="text-muted">'+(tab==='expense'?'-':'+')+idr(dTotal)+'</span></div>';
-          dayItems.forEach(function(it){
-            if(trackerEditId===it.id){
-              h+='<div class="pb-sm bg-card p-2 space-y-1 mt-1">';
-              h+='<p style="font-size:10px" class="text-primary mb-1">✏️ EDITING ENTRY</p>';
-              h+='<form onsubmit="trackerUpdate(event,\''+it.id+'\',\''+tab+'\')" class="space-y-1">';
-              h+='<div class="form-group"><label style="font-size:10px">AMOUNT (Rp)</label><input id="te-amt" type="text" inputmode="numeric" class="pb-sm" value="'+fmtDisp(it.amount)+'" required oninput="numfmt(this)" data-raw="'+Math.round(it.amount)+'"/></div>';
-              if(tab==='income')h+='<div class="form-group"><label style="font-size:10px">SOURCE</label><input id="te-src" class="pb-sm" value="'+esc(it.source||'')+'"/></div>';
-              h+='<div class="form-group"><label style="font-size:10px">CATEGORY</label><select id="te-cat" class="pb-sm" required><option value="">Select…</option>'+cats.map(function(c){return'<option value="'+c.id+'"'+(c.id===it.categoryId?' selected':'')+'>'+esc(c.name)+'</option>'}).join('')+'</select></div>';
-              h+='<div class="form-group"><label style="font-size:10px">DATE</label><input id="te-date" type="date" class="pb-sm" value="'+(it.date||new Date().toISOString().slice(0,10))+'"/></div>';
-              h+='<div class="form-group"><label style="font-size:10px">NOTE</label><input id="te-note" class="pb-sm" value="'+esc(it.note||'')+'"/></div>';
-              h+='<div class="flex gap-1 mt-1"><button type="submit" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:11px">SAVE</button><button type="button" class="btn" style="background:var(--bg);font-size:11px" onclick="trackerCancelEdit()">CANCEL</button></div>';
-              h+='</form></div>';
-            }else{
-              h+='<div class="pb-sm bg-bg p-1 flex items-center justify-between mt-1">'
-                +'<div style="flex:1"><div class="flex items-center gap-1"><span style="font-size:11px" class="text-primary">'+(tab==='expense'?esc(getCN(it.categoryId)):esc(it.source||''))+'</span>'+(it.isRecurring?'<span style="font-size:9px" class="text-accent">🔄</span>':'')+'</div>'
-                +(it.note?'<p style="font-size:9px" class="text-muted">'+esc(it.note)+'</p>':'')
-                +'</div>'
-                +'<div class="flex items-center gap-1"><span style="font-size:11px" class="'+(tab==='expense'?'text-red':'text-green')+'">'+(tab==='expense'?'-':'+')+idr(it.amount)+'</span>'
-                +'<button onclick="trackerEdit(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button>'
-                +'<button onclick="trackerDel(\''+it.id+'\',\''+tab+'\')" style="font-size:12px;background:none;border:none;color:var(--red);cursor:pointer;font-family:inherit">✕</button></div></div>';
-            }
-          });
+      var yKey='y-'+y, yOpen=!!trackerOpen[yKey];
+      h+='<div class="pb-sm bg-card" style="padding:8px 10px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="trackerToggleGroup(\''+yKey+'\')">'
+        +'<span style="font-size:14px" class="text-primary">'+(yOpen?'▼':'▶')+' '+y+'</span>'
+        +'<span style="font-size:12px" class="'+amtCls+'">'+sign+idr(groups[y].total)+'</span></div>';
+      if(!yOpen)return;
+      var months=Object.keys(groups[y].months).sort().reverse();
+      months.forEach(function(ym){
+        var mKey='m-'+ym, mOpen=!!trackerOpen[mKey];
+        var mObj=groups[y].months[ym];
+        h+='<div class="pb-sm bg-bg" style="padding:6px 10px 6px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="trackerToggleGroup(\''+mKey+'\')">'
+          +'<span style="font-size:12px" class="text-secondary">'+(mOpen?'▼':'▶')+' '+monthNames[mObj.monthIdx]+'</span>'
+          +'<span style="font-size:11px" class="'+amtCls+'">'+sign+idr(mObj.total)+'</span></div>';
+        if(!mOpen)return;
+        var days=Object.keys(mObj.days).sort().reverse();
+        days.forEach(function(ds){
+          var dKey='d-'+ds, dOpen=!!trackerOpen[dKey];
+          var dObj=mObj.days[ds];
+          h+='<div class="pb-sm bg-bg" style="padding:6px 10px 6px 34px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="trackerToggleGroup(\''+dKey+'\')">'
+            +'<span style="font-size:11px">'+(dOpen?'▼':'▶')+' '+fmtDate(ds)+' <span class="text-muted">('+dObj.items.length+')</span></span>'
+            +'<span style="font-size:11px" class="'+amtCls+'">'+sign+idr(dObj.total)+'</span></div>';
+          if(!dOpen)return;
+          h+='<div style="margin-left:34px" class="space-y-1">';
+          dObj.items.forEach(function(it){h+=renderEntry(it)});
           h+='</div>';
         });
-        h+='</div>';
       });
-      h+='</div>';
     });
+    h+='</div>';
+    /* Auto-open the group containing the item being edited */
   }
-  h+='</div></div>';
+  h+='</div>';
   return h;
 }
 
-window.setTrackerPeriod=function(p){trackerPeriod=p;render()};
-window.applyTrackerCustom=function(){
-  var f=(document.getElementById('tp-from')||{}).value;
-  var t=(document.getElementById('tp-to')||{}).value;
-  if(!f||!t){showToast('Please pick both dates');return}
-  if(f>t){showToast('End date must be after start date');return}
-  trackerCustomFrom=f;trackerCustomTo=t;render();
-};
-
+window.trackerToggleGroup=function(k){trackerOpen[k]=!trackerOpen[k];render()};
 window.setTrackerTab=function(t){trackerTab=t;trackerShowForm=false;trackerShowNewCat=false;trackerEditId=null;render()};
 window.trackerToggleForm=function(){trackerShowForm=!trackerShowForm;trackerShowNewCat=false;trackerEditId=null;render()};
 window.trackerToggleNewCat=function(){trackerShowNewCat=!trackerShowNewCat;render()};
@@ -694,7 +711,14 @@ window.trackerAdd=function(e){
   else{var src=document.getElementById('t-src');if(!src||!src.value)return;addInc({amount:amt,source:src.value,categoryId:cat,date:date,note:note||undefined,isRecurring:rec,recurringFrequency:rec?freq:undefined})}
   trackerShowForm=false;render();
 };
-window.trackerEdit=function(id,type){trackerEditId=id;trackerEditType=type;trackerShowForm=false;render()};
+window.trackerEdit=function(id,type){
+  trackerEditId=id;trackerEditType=type;trackerShowForm=false;
+  /* Auto-open groups containing this item so the edit form is visible */
+  var list=type==='expense'?store.expenses:store.incomes;
+  var it=list.find(function(x){return x.id===id});
+  if(it&&it.date){var p=it.date.split('-');trackerOpen['y-'+p[0]]=true;trackerOpen['m-'+p[0]+'-'+p[1]]=true;trackerOpen['d-'+it.date]=true}
+  render();
+};
 window.trackerCancelEdit=function(){trackerEditId=null;render()};
 window.trackerUpdate=function(e,id,type){
   e.preventDefault();
@@ -902,16 +926,18 @@ function renderProfile(){
   var h='<div class="space-y-3"><h2 style="font-size:20px">🎒 TRAINER CARD</h2>';
 
   /* Trainer info */
-  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">🧢</span></div><div style="flex:1">';
+  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">🧢</span></div><div style="flex:1;min-width:0">';
   if(profileEditUsername){
-    h+='<p style="font-size:10px" class="text-muted mb-1">CHANGE USERNAME</p>';
-    h+='<div class="flex gap-1"><input id="pf-uname" class="pb-sm" style="flex:1;font-size:12px" value="'+esc(u.username)+'" maxlength="30" placeholder="New username"/>';
-    h+='<button onclick="saveUsername()" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:10px">SAVE</button>';
-    h+='<button onclick="cancelUsername()" class="btn" style="background:var(--bg);font-size:10px">✕</button></div>';
-    if(profileUsernameErr)h+='<p style="font-size:10px;color:var(--red);margin-top:4px">'+esc(profileUsernameErr)+'</p>';
+    h+='<p style="font-size:11px" class="text-muted mb-1">EDIT USERNAME</p>';
+    if(profileUsernameErr)h+='<div class="warn-box" style="font-size:10px">⚠️ '+esc(profileUsernameErr)+'</div>';
+    h+='<div class="flex gap-1"><input id="pu-name" class="pb-sm" style="flex:1;font-size:14px" value="'+esc(u.username)+'" maxlength="32"/>'
+      +'<button onclick="saveUsername()" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:11px"'+(profileUsernameSaving?' disabled':'')+'>'+(profileUsernameSaving?'…':'SAVE')+'</button>'
+      +'<button onclick="cancelEditUsername()" class="btn" style="background:var(--bg);font-size:11px">✕</button></div>';
+    h+='<p style="font-size:10px" class="text-muted mt-1">'+esc(u.email)+'</p>';
   }else{
-    h+='<div class="flex items-center gap-1"><p style="font-size:16px">'+esc(u.username)+'</p><button onclick="editUsername()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit">✏️</button></div>';
-    h+='<p style="font-size:8px" class="text-muted">'+esc(u.email)+'</p>';
+    h+='<div class="flex items-center gap-2"><p style="font-size:16px">'+esc(u.username)+'</p>'
+      +'<button onclick="startEditUsername()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit" title="Change username">✏️</button></div>';
+    h+='<p style="font-size:11px" class="text-muted">'+esc(u.email)+'</p>';
   }
   h+='</div></div></div>';
 
@@ -953,6 +979,28 @@ function renderProfile(){
   return h;
 }
 
+window.startEditUsername=function(){profileEditUsername=true;profileUsernameErr='';render()};
+window.cancelEditUsername=function(){profileEditUsername=false;profileUsernameErr='';render()};
+window.saveUsername=async function(){
+  var el=document.getElementById('pu-name');if(!el)return;
+  var newName=(el.value||'').trim();
+  if(!newName){profileUsernameErr='Username cannot be empty';render();return}
+  if(newName.length<2){profileUsernameErr='Username must be at least 2 characters';render();return}
+  if(newName===state.user.username){profileEditUsername=false;render();return}
+  profileUsernameSaving=true;profileUsernameErr='';render();
+  /* Check uniqueness (excluding self) */
+  var chk=await sb.from('profiles').select('id').eq('username',newName).neq('id',state.user.id);
+  if(chk.error){profileUsernameSaving=false;profileUsernameErr=chk.error.message;render();return}
+  if(chk.data&&chk.data.length>0){profileUsernameSaving=false;profileUsernameErr='Username already taken!';render();return}
+  /* Update */
+  var upd=await sb.from('profiles').update({username:newName}).eq('id',state.user.id);
+  profileUsernameSaving=false;
+  if(upd.error){profileUsernameErr=upd.error.message;render();return}
+  state.user.username=newName;
+  profileEditUsername=false;profileUsernameErr='';
+  showToast('✅ Username updated!','success');
+  render();
+};
 window.setBalanceMode=function(mode){profileBalanceMode=mode;render()};
 window.saveBalanceInput=function(type){
   var el=document.getElementById('bal-input');if(!el)return;
@@ -965,25 +1013,6 @@ window.saveBalanceInput=function(type){
   saveInitialBalance(val);
   profileBalanceMode=null;
   showToast('✅ Balance saved!','success');
-};
-
-window.editUsername=function(){profileEditUsername=true;profileUsernameErr='';render()};
-window.cancelUsername=function(){profileEditUsername=false;profileUsernameErr='';render()};
-window.saveUsername=async function(){
-  var el=document.getElementById('pf-uname');if(!el)return;
-  var newName=(el.value||'').trim();
-  if(!newName){profileUsernameErr='Username cannot be empty';render();return}
-  if(newName===state.user.username){profileEditUsername=false;render();return}
-  /* check uniqueness */
-  var chk=await sb.from('profiles').select('id').eq('username',newName);
-  if(chk.data&&chk.data.length>0&&chk.data[0].id!==state.user.id){
-    profileUsernameErr='Username already taken';render();return;
-  }
-  var res=await sb.from('profiles').update({username:newName}).eq('id',state.user.id);
-  if(res.error){profileUsernameErr=res.error.message;render();return}
-  state.user.username=newName;
-  profileEditUsername=false;profileUsernameErr='';
-  showToast('✅ Username updated!','success');
 };
 
 /* ══════════════════════════════════════════════════════
