@@ -821,11 +821,11 @@ function renderProfile(){
   h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center"><span style="font-size:20px">🧢</span></div><div><p style="font-size:16px">'+esc(u.username)+'</p><p style="font-size:8px" class="text-muted">'+esc(u.email)+'</p></div></div></div>';
 
   /* Trainer stats */
-  h+='<div class="pb bg-card p-3"><p style="font-size:8px" class="text-muted mb-1">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
 
   /* ─── Wallet balance ─── */
   h+='<div class="pb bg-card p-3">';
-  h+='<div class="flex justify-between items-center mb-2"><p style="font-size:9px" class="text-muted">💰 WALLET BALANCE</p>';
+  h+='<div class="flex justify-between items-center mb-2"><p style="font-size:12px" class="text-muted">💰 WALLET BALANCE</p>';
   h+='<div class="flex gap-1">';
   h+='<button onclick="setBalanceMode(\'initial\')" style="font-size:12px;background:'+(profileBalanceMode==='initial'?'var(--primary)':'none')+';color:'+(profileBalanceMode==='initial'?'var(--primary-fg)':'var(--secondary)')+';border:'+(profileBalanceMode==='initial'?'1px solid var(--primary)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET STARTING</button>';
   h+='<button onclick="setBalanceMode(\'current\')" style="font-size:12px;background:'+(profileBalanceMode==='current'?'var(--accent)':'none')+';color:'+(profileBalanceMode==='current'?'#fff':'var(--accent)')+';border:'+(profileBalanceMode==='current'?'1px solid var(--accent)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET CURRENT</button>';
@@ -838,16 +838,16 @@ function renderProfile(){
   h+='</div>';
 
   if(profileBalanceMode==='initial'){
-    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your balance before tracking began:</p>';
+    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:12px" class="text-muted mb-1">Enter your balance before tracking began:</p>';
     h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
-    h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:10px">SAVE</button></div>';
-    h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
+    h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:12px">SAVE</button></div>';
+    h+='<button onclick="setBalanceMode(null)" style="font-size:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
   }else if(profileBalanceMode==='current'){
-    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:7px" class="text-muted mb-1">Enter your actual current wallet balance:</p>';
+    h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:12px" class="text-muted mb-1">Enter your actual current wallet balance:</p>';
     h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
-    h+='<button onclick="saveBalanceInput(\'current\')" class="btn" style="background:var(--accent);color:#fff;font-size:7px">SAVE</button></div>';
-    h+='<p style="font-size:6px" class="text-muted mt-1">Starting balance will be recalculated automatically.</p>';
-    h+='<button onclick="setBalanceMode(null)" style="font-size:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
+    h+='<button onclick="saveBalanceInput(\'current\')" class="btn" style="background:var(--accent);color:#fff;font-size:12px">SAVE</button></div>';
+    h+='<p style="font-size:12px" class="text-muted mt-1">Starting balance will be recalculated automatically.</p>';
+    h+='<button onclick="setBalanceMode(null)" style="font-size:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
   }
   h+='</div>';
 
