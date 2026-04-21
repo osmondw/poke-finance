@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>PokéWallet — Gotta Track 'Em All!</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -47,6 +48,33 @@ canvas{width:100%!important;image-rendering:auto}
 .loader{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 .spinner{width:32px;height:32px;border:4px solid var(--card);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.exp-chk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+.exp-chk input[type="checkbox"]{width:18px;height:18px;flex:0 0 18px;margin:0;cursor:pointer}
+@media (max-width:600px){
+  body{font-size:14px}
+  input,select{font-size:14px;padding:5px 6px}
+  .top-bar{padding:6px 8px}
+  .top-bar span{font-size:14px!important}
+  .top-bar button{font-size:13px!important}
+  .main-content{padding:8px;padding-bottom:80px}
+  .bottom-nav button{font-size:22px;padding:3px}
+  .bottom-nav button span.lbl{font-size:10px;margin-top:1px}
+  .tab-bar button{font-size:11px;padding:5px 3px;min-width:0}
+  .grid-3,.grid-4{gap:6px}
+  .pb{box-shadow:2px 2px 0 var(--fg)}
+  .poke-dialog{padding:8px}
+  .poke-dialog p{font-size:12px!important}
+  h2{font-size:14px!important}
+  .warn-box,.info-box{font-size:11px}
+  .toast{font-size:11px;padding:6px 12px}
+  .form-group label{font-size:11px}
+}
+@media (max-width:380px){
+  body{font-size:12px}
+  .bottom-nav button{font-size:18px}
+  .bottom-nav button span.lbl{font-size:9px}
+  .tab-bar button{font-size:10px}
+}
 </style>
 </head>
 <body>
@@ -95,6 +123,7 @@ var partEditId=null,partNameErr='';
 var logoutWarn=false;
 var profileBalanceMode=null; /* null | 'initial' | 'current' */
 var profileEditUsername=false,profileUsernameErr='',profileUsernameSaving=false;
+var exportFrom='',exportTo='',exportSel={expenses:true,incomes:false,bills:false},exportErr='';
 var trackerOpen={}; /* keys: 'y-2025', 'm-2025-03', 'd-2025-03-14' */
 var chartHover=null; /* {x,y,label,value} */
 /* Summary page state */
@@ -979,7 +1008,24 @@ function renderProfile(){
   }
   h+='</div>';
 
-  /* Actions */
+  /* Export Report */
+  var today=new Date().toISOString().slice(0,10);
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-2">📤 EXPORT REPORT (.xlsx)</p>';
+  if(exportErr)h+='<div class="warn-box" style="font-size:10px;margin-bottom:6px">⚠️ '+esc(exportErr)+'</div>';
+  h+='<div class="flex gap-1 mb-2">';
+  h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="exp-from" class="pb-sm" style="font-size:10px" max="'+today+'" value="'+esc(exportFrom)+'"/></div>';
+  h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="exp-to" class="pb-sm" style="font-size:10px" max="'+today+'" value="'+esc(exportTo)+'"/></div>';
+  h+='</div>';
+  h+='<p style="font-size:12px" class="text-muted mb-1">INCLUDE:</p>';
+  h+='<div class="space-y-1 mb-2" style="font-size:12px">';
+  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-exp" '+(exportSel.expenses?'checked':'')+' onchange="toggleExportSel(\'expenses\',this.checked)"/><span>Expenses</span></label>';
+  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-inc" '+(exportSel.incomes?'checked':'')+' onchange="toggleExportSel(\'incomes\',this.checked)"/><span>Income</span></label>';
+  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-bil" '+(exportSel.bills?'checked':'')+' onchange="toggleExportSel(\'bills\',this.checked)"/><span>Split Bills</span></label>';
+  h+='</div>';
+  h+='<button onclick="doExportReport()" class="btn w-full" style="background:var(--accent);color:#fff;font-size:13px;padding:8px">⬇ DOWNLOAD .XLSX</button>';
+  h+='</div>';
+
+
   h+='<div class="space-y-1"><button class="btn w-full" style="background:var(--secondary);color:var(--primary-fg);font-size:16px;padding:12px;text-align:left" onclick="nav(\'participants\')">👥 Manage Party Members</button>';
   h+='<button class="btn w-full" style="background:var(--red);color:#fff;font-size:16px;padding:12px;text-align:left" onclick="doLogout()">🚪 Log Out (EXIT GAME)</button></div>';
   h+='</div>';
@@ -1030,6 +1076,60 @@ window.saveBalanceInput=function(type){
   saveInitialBalance(val);
   profileBalanceMode=null;
   showToast('✅ Balance saved!','success');
+};
+
+window.toggleExportSel=function(k,v){
+  exportSel[k]=v;
+  var f=document.getElementById('exp-from'),t=document.getElementById('exp-to');
+  if(f)exportFrom=f.value;if(t)exportTo=t.value;
+  exportErr='';render();
+};
+window.doExportReport=function(){
+  var f=document.getElementById('exp-from'),t=document.getElementById('exp-to');
+  exportFrom=f?f.value:'';exportTo=t?t.value:'';
+  if(!exportFrom||!exportTo){exportErr='Please pick both FROM and TO dates';render();return}
+  if(exportFrom>exportTo){exportErr='FROM must be before TO';render();return}
+  if(!exportSel.expenses&&!exportSel.incomes&&!exportSel.bills){exportErr='Select at least one report type';render();return}
+  if(typeof XLSX==='undefined'){exportErr='Export library not loaded — check connection';render();return}
+  exportErr='';
+  var cats=store.categories;
+  function cn(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'Uncategorized'}
+  var wb=XLSX.utils.book_new();
+  if(exportSel.expenses){
+    var rows=store.expenses.filter(function(e){return e.date>=exportFrom&&e.date<=exportTo})
+      .sort(function(a,b){return a.date<b.date?-1:1})
+      .map(function(e){return{Date:e.date,Category:cn(e.categoryId),Note:e.note||'',Amount:e.amount,Recurring:e.isRecurring?(e.recurringFrequency||'yes'):''}});
+    var ws=XLSX.utils.json_to_sheet(rows.length?rows:[{Date:'',Category:'',Note:'',Amount:'',Recurring:''}]);
+    XLSX.utils.book_append_sheet(wb,ws,'Expenses');
+  }
+  if(exportSel.incomes){
+    var rows=store.incomes.filter(function(i){return i.date>=exportFrom&&i.date<=exportTo})
+      .sort(function(a,b){return a.date<b.date?-1:1})
+      .map(function(i){return{Date:i.date,Source:i.source||'',Category:cn(i.categoryId),Note:i.note||'',Amount:i.amount,Recurring:i.isRecurring?(i.recurringFrequency||'yes'):''}});
+    var ws=XLSX.utils.json_to_sheet(rows.length?rows:[{Date:'',Source:'',Category:'',Note:'',Amount:'',Recurring:''}]);
+    XLSX.utils.book_append_sheet(wb,ws,'Income');
+  }
+  if(exportSel.bills){
+    var bills=store.bills.filter(function(b){var d=(b.createdAt||'').slice(0,10);return d>=exportFrom&&d<=exportTo})
+      .sort(function(a,b){return a.createdAt<b.createdAt?-1:1});
+    var bRows=bills.map(function(b){return{Date:(b.createdAt||'').slice(0,10),Title:b.title||'',Total:b.totalAmount,Tax:b.tax||0,SplitMethod:b.splitMethod||'',Participants:(b.participants||[]).length,Items:(b.items||[]).length}});
+    var ws1=XLSX.utils.json_to_sheet(bRows.length?bRows:[{Date:'',Title:'',Total:'',Tax:'',SplitMethod:'',Participants:'',Items:''}]);
+    XLSX.utils.book_append_sheet(wb,ws1,'Split Bills');
+    var sRows=[];
+    bills.forEach(function(b){
+      (b.splits||[]).forEach(function(s){
+        var p=(b.participants||[]).find(function(x){return x.id===s.participantId||x.participantId===s.participantId});
+        sRows.push({BillDate:(b.createdAt||'').slice(0,10),BillTitle:b.title||'',Participant:s.name||(p&&p.name)||s.participantId||'',AmountOwed:s.amount||s.total||0});
+      });
+    });
+    if(sRows.length){
+      var ws2=XLSX.utils.json_to_sheet(sRows);
+      XLSX.utils.book_append_sheet(wb,ws2,'Bill Splits');
+    }
+  }
+  var fname='PokeWallet_'+exportFrom+'_to_'+exportTo+'.xlsx';
+  XLSX.writeFile(wb,fname);
+  showToast('✅ Report exported!','success');
 };
 
 /* ══════════════════════════════════════════════════════
