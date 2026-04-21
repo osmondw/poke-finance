@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>PokéWallet — Gotta Track 'Em All!</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -13,7 +12,7 @@
   --primary-fg:#1a1c2c;--accent:#38b764;--red:#e84040;--green:#38b764;
   --blue:#3978a8;--secondary:#5fcde4;
 }
-body{font-family:'Press Start 2P',monospace;background:var(--bg);color:var(--fg);font-size:20px;line-height:1.6;min-height:100vh;image-rendering:pixelated}
+body{font-family:'Press Start 2P',monospace;background:var(--bg);color:var(--fg);font-size:20px;line-height:1.6;min-height:100vh;image-rendering:pixelated;overflow-x:hidden}
 input,select,textarea,button{font-family:inherit}
 .pb{border:3px solid var(--fg);box-shadow:3px 3px 0 var(--fg)}
 .pb-sm{border:2px solid var(--fg);box-shadow:2px 2px 0 rgba(244,244,244,.3)}
@@ -31,12 +30,13 @@ select{appearance:auto}
 .text-center{text-align:center}.w-full{width:100%}.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.p-2{padding:8px}.p-3{padding:12px}.p-4{padding:16px}
 .space-y-1>*+*{margin-top:4px}.space-y-2>*+*{margin-top:8px}.space-y-3>*+*{margin-top:12px}
 .poke-dialog{border:3px solid var(--fg);box-shadow:3px 3px 0 var(--fg);background:var(--card);padding:12px;min-height:50px}
-.top-bar{background:var(--primary);color:var(--primary-fg);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--fg)}
+.top-bar{background:var(--primary);color:var(--primary-fg);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--fg);gap:8px}
+.top-brand,.top-user,.top-user-name{min-width:0}.top-user{display:flex;align-items:center;gap:8px;justify-content:flex-end}.top-user-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:3px solid var(--fg);display:flex;justify-content:space-around;padding:6px 0;z-index:100}
 .bottom-nav button{background:none;border:none;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;font-size:35px;padding:4px}
 .bottom-nav button span.lbl{font-size:20px;margin-top:2px}
 .bottom-nav button.active{color:var(--primary)}
-.main-content{flex:1;overflow-y:auto;padding:12px;padding-bottom:90px}
+.main-content{flex:1;overflow-y:auto;padding:12px;padding-bottom:90px}.main-content>*{min-width:0}
 .tab-bar{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
 .tab-bar button{flex:1;padding:6px 4px;font-size:16px;border:2px solid var(--fg);background:var(--bg);color:var(--muted);cursor:pointer;min-width:48px}
 .tab-bar button.active{background:var(--primary);color:var(--primary-fg)}
@@ -48,33 +48,9 @@ canvas{width:100%!important;image-rendering:auto}
 .loader{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:12px}
 .spinner{width:32px;height:32px;border:4px solid var(--card);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.exp-chk{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
-.exp-chk input[type="checkbox"]{width:18px;height:18px;flex:0 0 18px;margin:0;cursor:pointer}
-@media (max-width:600px){
-  body{font-size:14px}
-  input,select{font-size:14px;padding:5px 6px}
-  .top-bar{padding:6px 8px}
-  .top-bar span{font-size:14px!important}
-  .top-bar button{font-size:13px!important}
-  .main-content{padding:8px;padding-bottom:80px}
-  .bottom-nav button{font-size:22px;padding:3px}
-  .bottom-nav button span.lbl{font-size:10px;margin-top:1px}
-  .tab-bar button{font-size:11px;padding:5px 3px;min-width:0}
-  .grid-3,.grid-4{gap:6px}
-  .pb{box-shadow:2px 2px 0 var(--fg)}
-  .poke-dialog{padding:8px}
-  .poke-dialog p{font-size:12px!important}
-  h2{font-size:14px!important}
-  .warn-box,.info-box{font-size:11px}
-  .toast{font-size:11px;padding:6px 12px}
-  .form-group label{font-size:11px}
-}
-@media (max-width:380px){
-  body{font-size:12px}
-  .bottom-nav button{font-size:18px}
-  .bottom-nav button span.lbl{font-size:9px}
-  .tab-bar button{font-size:10px}
-}
+.stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.mobile-row{display:flex;gap:4px;align-items:flex-end}.mobile-row>*{min-width:0}
+@media (max-width:768px){body{font-size:14px;line-height:1.45}input,select{font-size:14px;padding:8px 10px}.main-content{padding:8px;padding-bottom:82px}.top-bar{padding:8px;align-items:flex-start}.top-brand{font-size:12px!important;flex:1}.top-user{max-width:52%;gap:6px}.top-user-name{font-size:12px!important}.top-user button{font-size:12px!important}.grid-3,.stat-grid{grid-template-columns:1fr}.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.tab-bar{gap:6px}.tab-bar button{min-width:0;font-size:11px!important;padding:8px 6px}.bottom-nav{padding:4px 0}.bottom-nav button{flex:1;min-width:0;font-size:24px;padding:2px 0}.bottom-nav button span.lbl{font-size:11px;margin-top:1px}.page-dashboard .month-summary-label,.page-summary .summary-range-label{font-size:11px!important;line-height:1.5}.page-dashboard .stats-label,.page-profile .stats-label,.page-summary .section-label{font-size:11px!important}.page-dashboard .stats-value,.page-summary .sum-total-value{font-size:15px!important;line-height:1.5;word-break:break-word}.page-dashboard .poke-dialog p:first-child{font-size:11px!important}.page-dashboard .poke-dialog p:last-child{font-size:13px!important;line-height:1.6}.page-dashboard canvas,.page-summary canvas{height:160px!important}.mobile-row{flex-direction:column;align-items:stretch}.mobile-row>*{width:100%!important}.wallet-header{flex-direction:column;align-items:flex-start!important;gap:8px}.wallet-actions{display:grid!important;grid-template-columns:1fr 1fr;width:100%}.wallet-actions button{width:100%}.profile-head{align-items:flex-start!important}}
+@media (max-width:420px){body{font-size:12px}.main-content{padding:6px;padding-bottom:78px}.top-brand{font-size:11px!important}.top-user-name{font-size:10px!important}.top-user button{font-size:10px!important}.bottom-nav button{font-size:20px}.bottom-nav button span.lbl{font-size:9px}.tab-bar button{font-size:10px!important;padding:7px 4px}.page-dashboard .stats-value,.page-summary .sum-total-value{font-size:13px!important}.page-dashboard canvas,.page-summary canvas{height:148px!important}}
 </style>
 </head>
 <body>
@@ -123,7 +99,6 @@ var partEditId=null,partNameErr='';
 var logoutWarn=false;
 var profileBalanceMode=null; /* null | 'initial' | 'current' */
 var profileEditUsername=false,profileUsernameErr='',profileUsernameSaving=false;
-var exportFrom='',exportTo='',exportSel={expenses:true,incomes:false,bills:false},exportErr='';
 var trackerOpen={}; /* keys: 'y-2025', 'm-2025-03', 'd-2025-03-14' */
 var chartHover=null; /* {x,y,label,value} */
 /* Summary page state */
@@ -365,8 +340,8 @@ function render(){
   if(!state.user){renderAuth();return}
 
   var html='<div class="flex flex-col" style="min-height:100vh">';
-  html+='<div class="top-bar"><span style="font-size:20px">PokéWallet</span><div class="flex items-center gap-2"><span style="font-size:20px">'+esc(state.user.username)+'</span><button onclick="doLogout()" style="font-size:20px;color:red;background:none;border:none;cursor:pointer;font-family:inherit">EXIT</button></div></div>';
-  html+='<div class="main-content">';
+  html+='<div class="top-bar"><span class="top-brand" style="font-size:20px">PokéWallet</span><div class="top-user"><span class="top-user-name" style="font-size:20px">'+esc(state.user.username)+'</span><button onclick="doLogout()" style="font-size:20px;color:red;background:none;border:none;cursor:pointer;font-family:inherit">EXIT</button></div></div>';
+  html+='<div class="main-content page-'+esc(state.page)+'">';
   switch(state.page){
     case'dashboard': html+=renderDashboard();break;
     case'tracker':   html+=renderTracker();break;
@@ -461,14 +436,14 @@ function renderDashboard(){
 
   var h='<div class="space-y-3">';
   h+='<div class="poke-dialog"><p style="font-size:18px" class="text-muted mb-1">PROF. OAK says:</p><p style="font-size:20px">Welcome back, <span class="text-primary">'+esc(state.user.username)+'</span>! Here\'s your PokéDex report!</p></div>';
-  h+='<p style="font-size:16px" class="text-muted text-center">📅 '+monthLabel+' — CURRENT MONTH SUMMARY</p>';
+  h+='<p style="font-size:16px" class="text-muted text-center month-summary-label">📅 '+monthLabel+' — CURRENT MONTH SUMMARY</p>';
 
   /* Stats cards */
-  h+='<div class="grid grid-3 gap-2">';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1">INCOME</p><p style="font-size:14px" class="text-green">'+idr(tInc)+'</p></div>';
-  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1">EXPENSE</p><p style="font-size:14px" class="text-red">'+idr(tExp)+'</p></div>';
+  h+='<div class="grid grid-3 gap-2 stat-grid">';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1 stats-label">INCOME</p><p style="font-size:14px" class="text-green stats-value">'+idr(tInc)+'</p></div>';
+  h+='<div class="pb bg-card p-3 text-center"><p style="font-size:16px" class="text-muted mb-1 stats-label">EXPENSE</p><p style="font-size:14px" class="text-red stats-value">'+idr(tExp)+'</p></div>';
   h+='<div class="pb bg-card p-3 text-center" onclick="nav(\'profile\')" style="cursor:pointer" title="Tap to edit balance">';
-  h+='<p style="font-size:16px" class="text-muted mb-1">BALANCE</p><p style="font-size:14px" class="'+(walletBal>=0?'text-green':'text-red')+'">'+idr(walletBal)+'</p></div>';
+  h+='<p style="font-size:16px" class="text-muted mb-1 stats-label">BALANCE</p><p style="font-size:14px" class="'+(walletBal>=0?'text-green':'text-red')+' stats-value">'+idr(walletBal)+'</p></div>';
   h+='</div>';
 
   /* Chart */
@@ -481,7 +456,7 @@ function renderDashboard(){
   h+='</div>';
 
   if(state.chartPeriod==='custom'){
-    h+='<div class="flex gap-1 mt-1 items-end">';
+    h+='<div class="mobile-row mt-1">';
     h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="chart-from" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomFrom)+'"/></div>';
     h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="chart-to" class="pb-sm" style="font-size:7px" max="'+today+'" value="'+esc(state.chartCustomTo)+'"/></div>';
     h+='<button onclick="applyCustomRange()" class="btn" style="font-size:12px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
@@ -962,11 +937,11 @@ function renderProfile(){
   var h='<div class="space-y-3"><h2 style="font-size:20px">🎒 TRAINER CARD</h2>';
 
   /* Trainer info */
-  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">🧢</span></div><div style="flex:1;min-width:0">';
+  h+='<div class="pb bg-card p-4"><div class="flex items-center gap-2 profile-head"><div class="pb-sm" style="width:48px;height:48px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="font-size:20px">🧢</span></div><div style="flex:1;min-width:0">';
   if(profileEditUsername){
     h+='<p style="font-size:11px" class="text-muted mb-1">EDIT USERNAME</p>';
     if(profileUsernameErr)h+='<div class="warn-box" style="font-size:10px">⚠️ '+esc(profileUsernameErr)+'</div>';
-    h+='<div class="flex gap-1"><input id="pu-name" class="pb-sm" style="flex:1;font-size:14px" value="'+esc(u.username)+'" maxlength="32"/>'
+    h+='<div class="mobile-row"><input id="pu-name" class="pb-sm" style="flex:1;font-size:14px" value="'+esc(u.username)+'" maxlength="32"/>'
       +'<button onclick="saveUsername()" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:11px"'+(profileUsernameSaving?' disabled':'')+'>'+(profileUsernameSaving?'…':'SAVE')+'</button>'
       +'<button onclick="cancelEditUsername()" class="btn" style="background:var(--bg);font-size:11px">✕</button></div>';
     h+='<p style="font-size:10px" class="text-muted mt-1">'+esc(u.email)+'</p>';
@@ -978,12 +953,12 @@ function renderProfile(){
   h+='</div></div></div>';
 
   /* Trainer stats */
-  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1 stats-label">TRAINER STATS</p><div class="grid grid-3 gap-2 text-center stat-grid"><div><p style="font-size:18px" class="text-primary">'+exps.length+'</p><p style="font-size:7px" class="text-muted">Expenses</p></div><div><p style="font-size:18px" class="text-primary">'+incs.length+'</p><p style="font-size:7px" class="text-muted">Incomes</p></div><div><p style="font-size:18px" class="text-primary">'+parts.length+'</p><p style="font-size:7px" class="text-muted">Party</p></div></div></div>';
 
   /* ─── Wallet balance ─── */
   h+='<div class="pb bg-card p-3">';
-  h+='<div class="flex justify-between items-center mb-2"><p style="font-size:12px" class="text-muted">💰 WALLET BALANCE</p>';
-  h+='<div class="flex gap-1">';
+  h+='<div class="flex justify-between items-center mb-2 wallet-header"><p style="font-size:12px" class="text-muted">💰 WALLET BALANCE</p>';
+  h+='<div class="flex gap-1 wallet-actions">';
   h+='<button onclick="setBalanceMode(\'initial\')" style="font-size:12px;background:'+(profileBalanceMode==='initial'?'var(--primary)':'none')+';color:'+(profileBalanceMode==='initial'?'var(--primary-fg)':'var(--secondary)')+';border:'+(profileBalanceMode==='initial'?'1px solid var(--primary)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET STARTING</button>';
   h+='<button onclick="setBalanceMode(\'current\')" style="font-size:12px;background:'+(profileBalanceMode==='current'?'var(--accent)':'none')+';color:'+(profileBalanceMode==='current'?'#fff':'var(--accent)')+';border:'+(profileBalanceMode==='current'?'1px solid var(--accent)':'none')+';cursor:pointer;font-family:inherit;padding:2px 4px">SET CURRENT</button>';
   h+='</div></div>';
@@ -996,36 +971,19 @@ function renderProfile(){
 
   if(profileBalanceMode==='initial'){
     h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:12px" class="text-muted mb-1">Enter your balance before tracking began:</p>';
-    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
+    h+='<div class="mobile-row"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(store.walletInitialBalance)+'" data-raw="'+Math.round(store.walletInitialBalance||0)+'"/>';
     h+='<button onclick="saveBalanceInput(\'initial\')" class="btn" style="background:var(--primary);color:var(--primary-fg);font-size:12px">SAVE</button></div>';
     h+='<button onclick="setBalanceMode(null)" style="font-size:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
   }else if(profileBalanceMode==='current'){
     h+='<div class="pb-sm bg-bg p-2 mt-2"><p style="font-size:12px" class="text-muted mb-1">Enter your actual current wallet balance:</p>';
-    h+='<div class="flex gap-1"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
+    h+='<div class="mobile-row"><input id="bal-input" type="text" inputmode="numeric" class="pb-sm" style="flex:1;font-size:10px" oninput="numfmt(this)" value="'+fmtDisp(Math.round(walletBal))+'" data-raw="'+Math.round(walletBal)+'"/>';
     h+='<button onclick="saveBalanceInput(\'current\')" class="btn" style="background:var(--accent);color:#fff;font-size:12px">SAVE</button></div>';
     h+='<p style="font-size:12px" class="text-muted mt-1">Starting balance will be recalculated automatically.</p>';
     h+='<button onclick="setBalanceMode(null)" style="font-size:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;margin-top:4px">Cancel</button></div>';
   }
   h+='</div>';
 
-  /* Export Report */
-  var today=new Date().toISOString().slice(0,10);
-  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-2">📤 EXPORT REPORT (.xlsx)</p>';
-  if(exportErr)h+='<div class="warn-box" style="font-size:10px;margin-bottom:6px">⚠️ '+esc(exportErr)+'</div>';
-  h+='<div class="flex gap-1 mb-2">';
-  h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="exp-from" class="pb-sm" style="font-size:10px" max="'+today+'" value="'+esc(exportFrom)+'"/></div>';
-  h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="exp-to" class="pb-sm" style="font-size:10px" max="'+today+'" value="'+esc(exportTo)+'"/></div>';
-  h+='</div>';
-  h+='<p style="font-size:12px" class="text-muted mb-1">INCLUDE:</p>';
-  h+='<div class="space-y-1 mb-2" style="font-size:12px">';
-  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-exp" '+(exportSel.expenses?'checked':'')+' onchange="toggleExportSel(\'expenses\',this.checked)"/><span>Expenses</span></label>';
-  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-inc" '+(exportSel.incomes?'checked':'')+' onchange="toggleExportSel(\'incomes\',this.checked)"/><span>Income</span></label>';
-  h+='<label class="exp-chk"><input type="checkbox" id="exp-c-bil" '+(exportSel.bills?'checked':'')+' onchange="toggleExportSel(\'bills\',this.checked)"/><span>Split Bills</span></label>';
-  h+='</div>';
-  h+='<button onclick="doExportReport()" class="btn w-full" style="background:var(--accent);color:#fff;font-size:13px;padding:8px">⬇ DOWNLOAD .XLSX</button>';
-  h+='</div>';
-
-
+  /* Actions */
   h+='<div class="space-y-1"><button class="btn w-full" style="background:var(--secondary);color:var(--primary-fg);font-size:16px;padding:12px;text-align:left" onclick="nav(\'participants\')">👥 Manage Party Members</button>';
   h+='<button class="btn w-full" style="background:var(--red);color:#fff;font-size:16px;padding:12px;text-align:left" onclick="doLogout()">🚪 Log Out (EXIT GAME)</button></div>';
   h+='</div>';
@@ -1078,60 +1036,6 @@ window.saveBalanceInput=function(type){
   showToast('✅ Balance saved!','success');
 };
 
-window.toggleExportSel=function(k,v){
-  exportSel[k]=v;
-  var f=document.getElementById('exp-from'),t=document.getElementById('exp-to');
-  if(f)exportFrom=f.value;if(t)exportTo=t.value;
-  exportErr='';render();
-};
-window.doExportReport=function(){
-  var f=document.getElementById('exp-from'),t=document.getElementById('exp-to');
-  exportFrom=f?f.value:'';exportTo=t?t.value:'';
-  if(!exportFrom||!exportTo){exportErr='Please pick both FROM and TO dates';render();return}
-  if(exportFrom>exportTo){exportErr='FROM must be before TO';render();return}
-  if(!exportSel.expenses&&!exportSel.incomes&&!exportSel.bills){exportErr='Select at least one report type';render();return}
-  if(typeof XLSX==='undefined'){exportErr='Export library not loaded — check connection';render();return}
-  exportErr='';
-  var cats=store.categories;
-  function cn(id){var c=cats.find(function(x){return x.id===id});return c?c.name:'Uncategorized'}
-  var wb=XLSX.utils.book_new();
-  if(exportSel.expenses){
-    var rows=store.expenses.filter(function(e){return e.date>=exportFrom&&e.date<=exportTo})
-      .sort(function(a,b){return a.date<b.date?-1:1})
-      .map(function(e){return{Date:e.date,Category:cn(e.categoryId),Note:e.note||'',Amount:e.amount,Recurring:e.isRecurring?(e.recurringFrequency||'yes'):''}});
-    var ws=XLSX.utils.json_to_sheet(rows.length?rows:[{Date:'',Category:'',Note:'',Amount:'',Recurring:''}]);
-    XLSX.utils.book_append_sheet(wb,ws,'Expenses');
-  }
-  if(exportSel.incomes){
-    var rows=store.incomes.filter(function(i){return i.date>=exportFrom&&i.date<=exportTo})
-      .sort(function(a,b){return a.date<b.date?-1:1})
-      .map(function(i){return{Date:i.date,Source:i.source||'',Category:cn(i.categoryId),Note:i.note||'',Amount:i.amount,Recurring:i.isRecurring?(i.recurringFrequency||'yes'):''}});
-    var ws=XLSX.utils.json_to_sheet(rows.length?rows:[{Date:'',Source:'',Category:'',Note:'',Amount:'',Recurring:''}]);
-    XLSX.utils.book_append_sheet(wb,ws,'Income');
-  }
-  if(exportSel.bills){
-    var bills=store.bills.filter(function(b){var d=(b.createdAt||'').slice(0,10);return d>=exportFrom&&d<=exportTo})
-      .sort(function(a,b){return a.createdAt<b.createdAt?-1:1});
-    var bRows=bills.map(function(b){return{Date:(b.createdAt||'').slice(0,10),Title:b.title||'',Total:b.totalAmount,Tax:b.tax||0,SplitMethod:b.splitMethod||'',Participants:(b.participants||[]).length,Items:(b.items||[]).length}});
-    var ws1=XLSX.utils.json_to_sheet(bRows.length?bRows:[{Date:'',Title:'',Total:'',Tax:'',SplitMethod:'',Participants:'',Items:''}]);
-    XLSX.utils.book_append_sheet(wb,ws1,'Split Bills');
-    var sRows=[];
-    bills.forEach(function(b){
-      (b.splits||[]).forEach(function(s){
-        var p=(b.participants||[]).find(function(x){return x.id===s.participantId||x.participantId===s.participantId});
-        sRows.push({BillDate:(b.createdAt||'').slice(0,10),BillTitle:b.title||'',Participant:s.name||(p&&p.name)||s.participantId||'',AmountOwed:s.amount||s.total||0});
-      });
-    });
-    if(sRows.length){
-      var ws2=XLSX.utils.json_to_sheet(sRows);
-      XLSX.utils.book_append_sheet(wb,ws2,'Bill Splits');
-    }
-  }
-  var fname='PokeWallet_'+exportFrom+'_to_'+exportTo+'.xlsx';
-  XLSX.writeFile(wb,fname);
-  showToast('✅ Report exported!','success');
-};
-
 /* ══════════════════════════════════════════════════════
    SUMMARY PAGE — periodic totals + per-category breakdown
    ══════════════════════════════════════════════════════ */
@@ -1171,7 +1075,7 @@ function renderSummary(){
 
   var h='<div class="space-y-3">';
   h+='<h2 style="font-size:20px">📊 SUMMARY</h2>';
-  h+='<p style="font-size:16px" class="text-muted">'+_sumLabel()+'</p>';
+  h+='<p style="font-size:16px" class="text-muted summary-range-label">'+_sumLabel()+'</p>';
 
   /* Type tabs */
   h+='<div class="tab-bar">'
@@ -1180,14 +1084,14 @@ function renderSummary(){
     +'</div>';
 
   /* Period tabs */
-  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">📅 RANGE</p>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1 section-label">📅 RANGE</p>';
   h+='<div class="tab-bar">';
   [{k:'month',l:'MONTH'},{k:'3month',l:'3MO'},{k:'year',l:'YEAR'},{k:'all',l:'ALL'},{k:'custom',l:'CUSTOM'}].forEach(function(p){
     h+='<button class="'+(sumPeriod===p.k?'active':'')+'" style="font-size:13px" onclick="setSumPeriod(\''+p.k+'\')">'+p.l+'</button>';
   });
   h+='</div>';
   if(sumPeriod==='custom'){
-    h+='<div class="flex gap-1 mt-2 items-end">';
+    h+='<div class="mobile-row mt-2">';
     h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">FROM</label><input type="date" id="sum-from" class="pb-sm" style="font-size:11px" max="'+today+'" value="'+esc(sumCustomFrom)+'"/></div>';
     h+='<div style="flex:1"><label style="font-size:12px;display:block;color:var(--muted);margin-bottom:2px">TO</label><input type="date" id="sum-to" class="pb-sm" style="font-size:11px" max="'+today+'" value="'+esc(sumCustomTo)+'"/></div>';
     h+='<button onclick="applySumCustom()" class="btn" style="font-size:12px;background:var(--primary);color:var(--primary-fg);white-space:nowrap;padding:6px">APPLY</button>';
@@ -1197,13 +1101,13 @@ function renderSummary(){
 
   /* Total card */
   h+='<div class="pb bg-card p-3 text-center">'
-    +'<p style="font-size:14px" class="text-muted mb-1">TOTAL '+(sumType==='expense'?'EXPENSES':'INCOME')+'</p>'
-    +'<p style="font-size:20px" class="'+amtCls+'">'+sign+idr(total)+'</p>'
+    +'<p style="font-size:14px" class="text-muted mb-1 section-label">TOTAL '+(sumType==='expense'?'EXPENSES':'INCOME')+'</p>'
+    +'<p style="font-size:20px" class="'+amtCls+' sum-total-value">'+sign+idr(total)+'</p>'
     +'<p style="font-size:12px" class="text-muted mt-1">'+filtered.length+' transactions across '+catList.length+' categor'+(catList.length===1?'y':'ies')+'</p>'
     +'</div>';
 
   /* Bar chart */
-  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1">📊 BY CATEGORY</p>';
+  h+='<div class="pb bg-card p-3"><p style="font-size:14px" class="text-muted mb-1 section-label">📊 BY CATEGORY</p>';
   if(catList.length===0){
     h+='<p style="font-size:14px" class="text-muted text-center" style="padding:16px 0">No data in this range.</p>';
   }else{
