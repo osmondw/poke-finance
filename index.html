@@ -289,7 +289,7 @@ window.doAuth=async function(e){
     /* Check username */
     var chk=await sb.from('profiles').select('id').eq('username',username);
     if(chk.data&&chk.data.length>0){authErr='Username already taken!';authLoading=false;render();return}
-    var res=await sb.auth.signUp({email:email,password:pw});
+    var res=await sb.auth.signUp({email:email,password:pw,options:{emailRedirectTo:window.location.href}});
     if(res.error){authErr=res.error.message;authLoading=false;render();return}
     if(res.data&&res.data.user){
       await sb.from('profiles').insert([{id:res.data.user.id,username:username}]);
