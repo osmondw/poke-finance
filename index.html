@@ -988,8 +988,9 @@ function renderProfile(){
 
   /* Export Report */
   h+='<div class="pb bg-card p-4"><div class="section-label" style="font-size:14px;font-weight:bold;margin-bottom:8px">📤 EXPORT REPORT</div>';
-  h+='<div class="mobile-row" style="display:flex;gap:8px;margin-bottom:8px"><div style="flex:1"><label class="stats-label" style="font-size:11px">FROM</label><input type="date" value="'+esc(exportFrom)+'" onchange="exportFrom=this.value" style="width:100%"></div>';
-  h+='<div style="flex:1"><label class="stats-label" style="font-size:11px">TO</label><input type="date" value="'+esc(exportTo)+'" onchange="exportTo=this.value" style="width:100%"></div></div>';
+  h+='<p style="font-size:10px;color:var(--muted);margin-bottom:6px">📅 Pick dates from the calendar or type them. Both fields are optional — leave blank for all-time.</p>';
+  h+='<div class="mobile-row" style="display:flex;gap:8px;margin-bottom:8px"><div style="flex:1"><label class="stats-label" style="font-size:11px">FROM (optional)</label><input type="date" value="'+esc(exportFrom)+'" onchange="exportFrom=this.value" style="width:100%"></div>';
+  h+='<div style="flex:1"><label class="stats-label" style="font-size:11px">TO (optional)</label><input type="date" value="'+esc(exportTo)+'" onchange="exportTo=this.value" style="width:100%"></div></div>';
   h+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">';
   h+='<label style="display:flex;align-items:center;gap:8px;font-size:12px"><input type="checkbox" class="exp-chk"'+(exportSel.expenses?' checked':'')+' onchange="exportSel.expenses=this.checked"> Expenses</label>';
   h+='<label style="display:flex;align-items:center;gap:8px;font-size:12px"><input type="checkbox" class="exp-chk"'+(exportSel.income?' checked':'')+' onchange="exportSel.income=this.checked"> Income</label>';
@@ -1053,32 +1054,35 @@ window.saveBalanceInput=function(type){
 };
 window.doExportReport=function(){
   exportErr='';
-  if(!exportFrom||!exportTo){exportErr='Please choose FROM and TO dates';render();return}
-  if(exportFrom>exportTo){exportErr='FROM must be before TO';render();return}
   if(!exportSel.expenses&&!exportSel.income&&!exportSel.bills){exportErr='Pick at least one data type';render();return}
   if(typeof XLSX==='undefined'){exportErr='Excel library not loaded yet, try again';render();return}
+  /* Dates are optional. If both provided and reversed, swap them. If only one provided, treat as open-ended. */
+  var fromD=exportFrom||'', toD=exportTo||'';
+  if(fromD&&toD&&fromD>toD){var _t=fromD;fromD=toD;toD=_t;}
+  var inRange=function(d){if(!d)return false;if(fromD&&d<fromD)return false;if(toD&&d>toD)return false;return true;};
   var catName=function(id){var c=store.categories.find(function(x){return x.id===id});return c?c.name:''};
   var wb=XLSX.utils.book_new();
   if(exportSel.expenses){
-    var rows=store.expenses.filter(function(e){return e.date>=exportFrom&&e.date<=exportTo})
+    var rows=store.expenses.filter(function(e){return inRange(e.date)})
       .sort(function(a,b){return a.date<b.date?-1:1})
       .map(function(e){return{Date:e.date,Category:catName(e.categoryId),Amount:e.amount,Note:e.note||'',Recurring:e.isRecurring?(e.recurringFrequency||'yes'):''}});
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{Date:'',Category:'',Amount:'',Note:'',Recurring:''}]),'Expenses');
   }
   if(exportSel.income){
-    var rows2=store.incomes.filter(function(i){return i.date>=exportFrom&&i.date<=exportTo})
+    var rows2=store.incomes.filter(function(i){return inRange(i.date)})
       .sort(function(a,b){return a.date<b.date?-1:1})
       .map(function(i){return{Date:i.date,Category:catName(i.categoryId),Source:i.source||'',Amount:i.amount,Note:i.note||'',Recurring:i.isRecurring?(i.recurringFrequency||'yes'):''}});
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows2.length?rows2:[{Date:'',Category:'',Source:'',Amount:'',Note:'',Recurring:''}]),'Income');
   }
   if(exportSel.bills){
-    var bs=store.bills.filter(function(b){var d=(b.createdAt||'').slice(0,10);return d>=exportFrom&&d<=exportTo});
+    var bs=store.bills.filter(function(b){var d=(b.createdAt||'').slice(0,10);return inRange(d)});
     var bills=bs.map(function(b){return{Date:(b.createdAt||'').slice(0,10),Title:b.title,Total:b.totalAmount,AmountBeforeTax:b.amountBeforeTax||'',Tax:b.tax||'',SplitMethod:b.splitMethod}});
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(bills.length?bills:[{Date:'',Title:'',Total:'',AmountBeforeTax:'',Tax:'',SplitMethod:''}]),'Split Bills');
     var splits=[];bs.forEach(function(b){(b.splits||[]).forEach(function(s){splits.push({Bill:b.title,Date:(b.createdAt||'').slice(0,10),Participant:s.participantName||s.participantId||'',Amount:s.amount})})});
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(splits.length?splits:[{Bill:'',Date:'',Participant:'',Amount:''}]),'Bill Splits');
   }
-  XLSX.writeFile(wb,'pokewallet-report-'+exportFrom+'-to-'+exportTo+'.xlsx');
+  var fname='pokewallet-report'+(fromD?'-'+fromD:'')+(toD?'-to-'+toD:'')+(!fromD&&!toD?'-all-time':'')+'.xlsx';
+  XLSX.writeFile(wb,fname);
   showToast('✅ Report exported!','success');
 };
 
