@@ -101,6 +101,7 @@ var partEditId=null,partNameErr='';
 var logoutWarn=false;
 var profileBalanceMode=null; /* null | 'initial' | 'current' */
 var profileEditUsername=false,profileUsernameErr='',profileUsernameSaving=false;
+var profileEditPassword=false,profilePasswordErr='',profilePasswordSaving=false;
 var exportFrom='',exportTo='',exportSel={expenses:true,income:true,bills:false},exportErr='';
 var trackerOpen={}; /* keys: 'y-2025', 'm-2025-03', 'd-2025-03-14' */
 var chartHover=null; /* {x,y,label,value} */
@@ -109,6 +110,14 @@ var sumType='expense'; /* 'expense' | 'income' */
 var sumPeriod='month'; /* 'month' | '3month' | 'year' | 'all' | 'custom' */
 var sumCustomFrom='', sumCustomTo='';
 var sumHover=null;
+
+/* ── Password Toggle Visibility ──────────────────────── */
+window.togglePasswordVisibility=function(id){
+  var el=document.getElementById(id);
+  if(el){
+    el.type=el.type==='password'?'text':'password';
+  }
+};
 
 /* ── Toast ───────────────────────────────────────────── */
 var _toastTimer=null;
@@ -271,10 +280,20 @@ async function loadSession(session){
    ══════════════════════════════════════════════════════ */
 window.toggleAuth=function(){authMode=authMode==='login'?'signup':'login';authErr='';render()};
 
+window.toggleForgot=function(){authMode='forgot';authErr='';render()};
+window.doForgot=async function(e){
+  e.preventDefault();
+  var email=(document.getElementById('a-email-forgot').value||'').trim();
+  if(!email)return;
+  authLoading=true;authErr='';render();
+  var res=await sb.auth.resetPasswordForEmail(email, {redirectTo: window.location.href});
+  authLoading=false;
+  if(res.error){authErr=res.error.message;render()}
+  else{authMode='reset_sent';render()}
+};
+
 window.doAuth=async function(e){
   e.preventDefault();
-  /* Read form values BEFORE calling render(), otherwise the re-render
-     rebuilds the inputs and wipes the values the user typed. */
   var email=(document.getElementById('a-email').value||'').trim();
   var pw=document.getElementById('a-pw').value;
   var username=authMode==='signup'?((document.getElementById('a-user')||{}).value||'').trim():'';
@@ -283,10 +302,8 @@ window.doAuth=async function(e){
   if(authMode==='login'){
     var res=await sb.auth.signInWithPassword({email:email,password:pw});
     if(res.error){authErr=res.error.message;authLoading=false;render()}
-    /* onAuthStateChange handles success */
   } else {
     if(!username){authErr='Username required!';authLoading=false;render();return}
-    /* Check username */
     var chk=await sb.from('profiles').select('id').eq('username',username);
     if(chk.data&&chk.data.length>0){authErr='Username already taken!';authLoading=false;render();return}
     var res=await sb.auth.signUp({email:email,password:pw,options:{emailRedirectTo:window.location.href}});
@@ -294,12 +311,10 @@ window.doAuth=async function(e){
     if(res.data&&res.data.user){
       await sb.from('profiles').insert([{id:res.data.user.id,username:username}]);
       if(!res.data.session){
-        /* Email confirmation required */
         authMode='confirm';authLoading=false;render();return;
       }
     }
     authLoading=false;
-    /* If session returned immediately, onAuthStateChange fires */
   }
 };
 
@@ -402,19 +417,39 @@ function renderAuth(){
     app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div class="pb bg-card p-4 text-center" style="max-width:380px;width:100%"><p style="font-size:30px;margin-bottom:8px">📬</p><p style="font-size:10px" class="text-primary mb-2">CHECK YOUR EMAIL</p><p style="font-size:8px" class="text-muted">We sent a confirmation link. Confirm your email then come back to log in.</p><button onclick="authBackToLogin()" class="btn mt-2 w-full" style="background:var(--primary);color:var(--primary-fg);font-size:8px">▶ BACK TO LOGIN</button></div></div>';
     return;
   }
+  if(authMode==='reset_sent'){
+    app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div class="pb bg-card p-4 text-center" style="max-width:380px;width:100%"><p style="font-size:30px;margin-bottom:8px">📬</p><p style="font-size:10px" class="text-primary mb-2">CHECK YOUR EMAIL</p><p style="font-size:8px" class="text-muted">We sent a password reset link. Check your inbox.</p><button onclick="authBackToLogin()" class="btn mt-2 w-full" style="background:var(--primary);color:var(--primary-fg);font-size:8px">▶ BACK TO LOGIN</button></div></div>';
+    return;
+  }
+  
   var isLogin=authMode==='login';
-  app.innerHTML='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:100%;max-width:400px"><div class="text-center mb-2"><h1 style="font-size:18px" class="text-primary">⚡ PokéWallet ⚡</h1><p style="font-size:14px" class="text-muted">Gotta Track \'Em All!</p></div>'
-    +'<div class="pb bg-card p-4"><h2 style="font-size:11px" class="text-center mb-2">'+(isLogin?'► TRAINER LOGIN':'► NEW TRAINER')+'</h2>'
-    +'<form onsubmit="doAuth(event)" class="space-y-2">'
-    +(!isLogin?'<div class="form-group"><label>USERNAME</label><input id="a-user" class="pb-sm" placeholder="Ash Ketchum" autocomplete="username"/></div>':'')
-    +'<div class="form-group"><label>EMAIL</label><input id="a-email" type="email" class="pb-sm" placeholder="ash@pokemon.com" required autocomplete="email"/></div>'
-    +'<div class="form-group"><label>PASSWORD</label><input id="a-pw" type="password" class="pb-sm" placeholder="••••••••" required minlength="6" autocomplete="'+(isLogin?'current-password':'new-password')+'"/></div>'
-    +(authErr?'<p style="font-size:12px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
-    +'<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:10px;padding:10px"'+(authLoading?' disabled':'')+'>'+( authLoading?'…LOADING…':(isLogin?'▶ START ADVENTURE':'▶ CREATE TRAINER'))+'</button>'
-    +'</form>'
-    +'<div class="text-center mt-2"><button onclick="toggleAuth()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">'+(isLogin?'New trainer? Sign up!':'Already a trainer? Log in!')+'</button></div>'
-    +'</div><p class="text-center text-muted mt-1" style="font-size:6px">v3.0 — Cloud-powered by Supabase</p>'
-    +'</div></div>';
+  var isForgot=authMode==='forgot';
+  var title=isForgot?'► RESET PASSWORD':(isLogin?'► TRAINER LOGIN':'► NEW TRAINER');
+  
+  var html='<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px"><div style="width:100%;max-width:400px"><div class="text-center mb-2"><h1 style="font-size:18px" class="text-primary">⚡ PokéWallet ⚡</h1><p style="font-size:14px" class="text-muted">Gotta Track \'Em All!</p></div>'
+    +'<div class="pb bg-card p-4"><h2 style="font-size:11px" class="text-center mb-2">'+title+'</h2>';
+    
+  if(isForgot){
+    html+='<form onsubmit="doForgot(event)" class="space-y-2">'
+      +'<div class="form-group"><label>EMAIL</label><input id="a-email-forgot" type="email" class="pb-sm" placeholder="ash@pokemon.com" required autocomplete="email"/></div>'
+      +(authErr?'<p style="font-size:12px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
+      +'<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:10px;padding:10px"'+(authLoading?' disabled':'')+'>'+(authLoading?'…SENDING…':'▶ SEND RESET LINK')+'</button>'
+      +'</form>'
+      +'<div class="text-center mt-2"><button onclick="authBackToLogin()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">Back to Login</button></div>';
+  } else {
+    html+='<form onsubmit="doAuth(event)" class="space-y-2">'
+      +(!isLogin?'<div class="form-group"><label>USERNAME</label><input id="a-user" class="pb-sm" placeholder="Ash Ketchum" autocomplete="username"/></div>':'')
+      +'<div class="form-group"><label>EMAIL</label><input id="a-email" type="email" class="pb-sm" placeholder="ash@pokemon.com" required autocomplete="email"/></div>'
+      +'<div class="form-group"><label>PASSWORD</label><div style="position:relative;display:flex;align-items:center;"><input id="a-pw" type="password" class="pb-sm" placeholder="••••••••" required minlength="6" autocomplete="'+(isLogin?'current-password':'new-password')+'" style="flex:1;padding-right:32px;"/><button type="button" onclick="togglePasswordVisibility(\'a-pw\')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:14px;">👁️</button></div></div>'
+      +(authErr?'<p style="font-size:12px;text-align:center" class="text-red">'+esc(authErr)+'</p>':'')
+      +'<button type="submit" class="btn w-full" style="background:var(--primary);color:var(--primary-fg);font-size:10px;padding:10px"'+(authLoading?' disabled':'')+'>'+(authLoading?'…LOADING…':(isLogin?'▶ START ADVENTURE':'▶ CREATE TRAINER'))+'</button>'
+      +'</form>'
+      +'<div class="text-center mt-2" style="display:flex;flex-direction:column;gap:8px;"><button onclick="toggleAuth()" style="font-size:12px;background:none;border:none;color:var(--secondary);cursor:pointer;font-family:inherit;text-decoration:underline">'+(isLogin?'New trainer? Sign up!':'Already a trainer? Log in!')+'</button>'
+      +(isLogin?'<button onclick="toggleForgot()" style="font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;text-decoration:underline">Forgot Password?</button>':'')+'</div>';
+  }
+  
+  html+='</div><p class="text-center text-muted mt-1" style="font-size:6px">v3.0 — Cloud-powered by Supabase</p></div></div>';
+  app.innerHTML=html;
 }
 window.authBackToLogin=function(){authMode='login';authErr='';render()};
 
@@ -930,6 +965,21 @@ window.partDel=function(id){delPart(id);render()};
 /* ══════════════════════════════════════════════════════
    PROFILE / BAG
    ══════════════════════════════════════════════════════ */
+window.startEditPassword=function(){profileEditPassword=true;profilePasswordErr='';render()};
+window.cancelEditPassword=function(){profileEditPassword=false;profilePasswordErr='';render()};
+window.savePassword=async function(){
+  var el=document.getElementById('pu-pw');if(!el)return;
+  var newPw=el.value;
+  if(newPw.length<6){profilePasswordErr='Password must be at least 6 characters';render();return}
+  profilePasswordSaving=true;profilePasswordErr='';render();
+  var res=await sb.auth.updateUser({password:newPw});
+  profilePasswordSaving=false;
+  if(res.error){profilePasswordErr=res.error.message;render();return}
+  profileEditPassword=false;
+  showToast('✅ Password updated!','success');
+  render();
+};
+
 function renderProfile(){
   var u=state.user;
   var parts=getParts(),exps=getExp(),incs=getInc();
@@ -1001,7 +1051,21 @@ function renderProfile(){
   h+='</div>';
 
   /* Actions */
-  h+='<div class="space-y-1"><button class="btn w-full" style="background:var(--secondary);color:var(--primary-fg);font-size:16px;padding:12px;text-align:left" onclick="nav(\'participants\')">👥 Manage Party Members</button>';
+  h+='<div class="space-y-1">';
+  
+  /* Update password form directly in profile */
+  if(profileEditPassword){
+    h+='<div class="pb bg-card p-3 space-y-2">';
+    h+='<p style="font-size:12px" class="text-primary">🔑 CHANGE PASSWORD</p>';
+    if(profilePasswordErr)h+='<div class="warn-box" style="font-size:10px">⚠️ '+esc(profilePasswordErr)+'</div>';
+    h+='<div style="position:relative;display:flex;align-items:center;"><input id="pu-pw" type="password" class="pb-sm" placeholder="New password" style="flex:1;font-size:12px;padding-right:32px;" minlength="6"/><button type="button" onclick="togglePasswordVisibility(\'pu-pw\')" style="position:absolute;right:8px;background:none;border:none;cursor:pointer;font-size:14px;">👁️</button></div>';
+    h+='<div class="flex gap-1"><button onclick="savePassword()" class="btn flex-1" style="background:var(--primary);color:var(--primary-fg);font-size:11px"'+(profilePasswordSaving?' disabled':'')+'>'+(profilePasswordSaving?'…':'SAVE')+'</button><button onclick="cancelEditPassword()" class="btn" style="background:var(--bg);font-size:11px">CANCEL</button></div>';
+    h+='</div>';
+  } else {
+    h+='<button class="btn w-full" style="background:var(--bg);color:var(--fg);font-size:16px;padding:12px;text-align:left" onclick="startEditPassword()">🔑 Change Password</button>';
+  }
+
+  h+='<button class="btn w-full" style="background:var(--secondary);color:var(--primary-fg);font-size:16px;padding:12px;text-align:left" onclick="nav(\'participants\')">👥 Manage Party Members</button>';
   h+='<button class="btn w-full" style="background:var(--red);color:#fff;font-size:16px;padding:12px;text-align:left" onclick="doLogout()">🚪 Log Out (EXIT GAME)</button></div>';
   h+='</div>';
   return h;
